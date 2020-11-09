@@ -1,0 +1,43 @@
+{
+    // Matlab installation directory
+    // If set to 'default', AutoMatlab will search in:
+    // - C:/Matlab/RXXXXX
+    // - C:/Program Files/MATLAB/RXXXXX'
+    "matlab_install_dir": "default",
+
+    // Additional include_dirs below matlab installation dir
+    "include_dirs":
+    [
+       "toolbox/shared/controllib/engine/@DynamicSystem",
+       "toolbox/shared/controllib/engine/@StaticModel",
+       "toolbox/matlab/matfun",
+    ],
+
+    // Specific dirs to exclude below the matlab installation dir
+    "exclude_dirs":
+    [
+       "toolbox/local",
+    ],
+
+    // Matlab contains summaries of functions in Contents.m files
+    // AutoMatlab can look for the Contents.m files and:
+    // 'ignore': don't use Contents.m files for completions
+    // 'read': read Contents.m files for completions
+    // 'dir': search in dir of Contents.m files for completions
+    "contents_files": "dir",
+
+    // Matlab stores its autocompletion metadata in functionSignatures.json files
+    // AutoMatlab can look for the functionSignatures.json files and:
+    // 'ignore': don't use functionSignatures.json files for completions
+    // 'read': read functionSignatures.json files for completions
+    // 'dir': search in dir of functionSignatures.json files for completions
+    "signatures_files": "dir",
+
+    // Sublime Text lets you navigate the completion list
+    // with 'up/down', forcing you to press 'esc' when you
+    // want to move the cursor to a lower line. This option
+    // keeps up/down for navigating your document, while
+    // ctrl+up/down are for navigation the autocompletion.
+    "preserve_up_down_keys": true,
+
+}

@@ -1,0 +1,23 @@
+[
+    // use ctrl+up/down to move through autocompletion list
+    {
+        "keys": ["ctrl+up"], 
+        "command": "navigate_auto_matlab", "args": {"amount": -1.0 },
+        "context": 
+        [
+            {"key": "selector", "operator": "equal", "operand": "source.matlab" },
+            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
+        ],
+
+    },
+    {
+        "keys": ["ctrl+down"], 
+        "command": "navigate_auto_matlab", "args": {"amount": 1.0 },
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
+        ],
+
+    },
+]
