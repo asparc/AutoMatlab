@@ -33,11 +33,19 @@
     // 'dir': search in dir of functionSignatures.json files for completions
     "signatures_files": "dir",
 
+    // Show a popup with detailed function documentation upon an exact match
+    // with the autocompletion trigger of a function
+    "documentation_popup": true,
+
     // Sublime Text lets you navigate the completion list
     // with 'up/down', forcing you to press 'esc' when you
-    // want to move the cursor to a lower line. This option
+    // want to move the cursor to another line. This option
     // keeps up/down for navigating your document, while
     // ctrl+up/down are for navigation the autocompletion.
-    "preserve_up_down_keys": true,
+    "ctrl_completion_navigation": true,
 
+    // With option ctrl_completion_navigation set to true,
+    // it is convenient to use ctlr+right to commit
+    // the current completion suggestion
+    "ctrl_right_commit": true,
 }

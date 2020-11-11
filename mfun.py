@@ -39,7 +39,8 @@ class mfun:
                 return
 
             # prepare regex patterns
-            ann_regex = re.compile(r'^\s*%+[\s%]*' + self.fun + r'\s*(.*)', re.I)
+            ann_regex = re.compile(r'^\s*%+[\s%]*' + self.fun + r'\s*(.*)',
+                                   re.I)
             def_regex = re.compile(
                 r'^\s*%+[\s%]*((?:\w+\s*=\s*|\[[\w\s\.,]+\]\s*=\s*)?'
                 + self.fun + r'\([^\)]*\))', re.I)
@@ -57,9 +58,9 @@ class mfun:
                         self.annotation = mo.group(1)
                         # replace invalid html characters
                         ann = self.annotation
-                        ann = ann.replace('&','&amp;')
-                        ann = ann.replace('<','&lt;')
-                        ann = ann.replace('>','&gt;')
+                        ann = ann.replace('&', '&amp;')
+                        ann = ann.replace('<', '&lt;')
+                        ann = ann.replace('>', '&gt;')
                         # add documentation header
                         self.details = '<p><b>{}</b></p>'.format(ann)
                         # start documentation paragraph
@@ -88,12 +89,12 @@ class mfun:
                     if mo:
                         details = mo.group(1)
                         # replace invalid html characters
-                        details = details.replace('&','&amp;')
-                        details = details.replace('<','&lt;')
-                        details = details.replace('>','&gt;')
+                        details = details.replace('&', '&amp;')
+                        details = details.replace('<', '&lt;')
+                        details = details.replace('>', '&gt;')
                         # append to documentation paragraph
-                        if not ( self.details[-3:] == '<p>' \
-                                or self.details[-4:] == '<br>' ):
+                        if not (self.details[-3:] == '<p>'
+                                or self.details[-4:] == '<br>'):
                             self.details += '<br>'
                         self.details += details
                     else:

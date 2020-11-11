@@ -18,6 +18,8 @@ COMPLETIONS_SAVE = join('data', 'completions')
 
 
 def find_matlab(search):
+    """Find the Matlab installation directory.
+    """
     def search_dir(d):
         if not isdir(d):
             return False
@@ -50,6 +52,14 @@ def find_matlab(search):
 
 
 def process_signature(signature):
+    """Process a functionSignatures.json file to extract Matlab function names
+    from it.
+
+    Although functionSignatures.json contains the autocompletion information
+    that Matlab natively uses, only the function names are extracted from this
+    file by AutoMatlab. The reason is that the autocompletion information in 
+    functionSignatures.json is very inconsistent and incomplete.
+    """
     if not isfile(signature):
         return []
 
@@ -84,6 +94,12 @@ def process_signature(signature):
 
 
 def process_contents(contents):
+    """Process a Contents.m file to extract Matlab function names from it.
+
+    This function expects the default Matlab structure of Contents.m files. 
+    Unfortunately, this structure is not always faithfully applied, in which
+    case AutoMatlab won't recognize the functions.
+    """
     if not isfile(contents):
         return []
 
@@ -113,6 +129,13 @@ def process_contents(contents):
 
 
 class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
+
+    """Generate Matlab autocompletion information by parsing the
+    current Matlab installation.
+
+    TODO: Run in separate thread.
+    """
+
     def run(self):
         self.completions = {}
 
@@ -208,8 +231,20 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
 
 
 class NavigateAutoMatlabCommand(sublime_plugin.TextCommand):
+
+    """Redefine the commands for navigating through the autocompletion popup.
+    """
+
     def run(self, edit, amount):
         if amount > 0:
             self.view.run_command('auto_complete')
-        else:
+        elif amount < 0:
             self.view.run_command('auto_complete_prev')
+        else:
+            settings = sublime.load_settings('AutoMatlab.sublime-settings')
+            right_commit = settings.get('ctrl_right_commit', False)
+            if right_commit:
+                self.view.run_command('commit_completion')
+            else:
+                self.view.run_command('move',
+                    {'by':'word_ends', 'forward': True})
