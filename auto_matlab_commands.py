@@ -15,6 +15,7 @@ DEFAULT_MATLAB_INSTALL_DIRS = ('C:', 'C:/Program Files')
 SIGNATURES_NAME = 'functionSignatures.json'
 CONTENTS_NAME = 'Contents.m'
 COMPLETIONS_SAVE = join('data', 'completions')
+MDOC_SNIPPET_PATH = ('Snippets', 'mdoc.sublime-snippet')
 
 
 def find_matlab(search):
@@ -247,4 +248,170 @@ class NavigateAutoMatlabCommand(sublime_plugin.TextCommand):
                 self.view.run_command('commit_completion')
             else:
                 self.view.run_command('move',
-                    {'by':'word_ends', 'forward': True})
+                                      {'by': 'word_ends', 'forward': True})
+
+class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
+
+    """Generate a snippet for documenting matlab functions
+
+    TODO: add matlab classes
+    """
+
+    def run(self, edit):
+        # read first line
+        region1 = self.view.line(0)
+        line1 = (self.view.substr(region1))
+
+        # extract function definition components
+        pattern = r'^\s*function\s+((?:\[(.*)\]\s*=|(\w+)\s*=|)' \
+            r'\s*(\w+)\((.*)\))'
+        mo = re.search(pattern, line1)
+        if not mo:
+            msg = '[WARNING] AutoMatlab - Could not find Matlab' \
+                'function signature.'
+            self.view.window().status_message(msg)
+            return
+
+        # get signature, outargs, function name, inargs
+        signature = mo.group(1)
+        outargs = []
+        if mo.group(2):
+            outargs = [arg.strip() for arg in mo.group(2).split(',')]
+        if mo.group(3):
+            outargs = [arg.strip() for arg in mo.group(3).split(',')]
+        fun = mo.group(4)
+        inargs = []
+        if mo.group(5):
+            inargs = [arg.strip() for arg in mo.group(5).split(',')]
+
+        # read mdoc snippet
+        with open(join(*MDOC_SNIPPET_PATH)) as fh:
+            snip_all = fh.read()
+
+        # extract mdoc snippet content
+        pattern = r'<!\[CDATA\[([\s\S]*)\]]>'
+        mo = re.search(pattern, snip_all)
+        if not mo:
+            msg = '[ERROR] AutoMatlab - mdoc snippet could not ' \
+                'be found.'
+            self.view.window().status_message(msg)
+            return
+        snip = mo.group(1).strip()
+
+        # some validity check on the mdoc snippet
+        mo = re.findall(r'^[^\n]*\${MDOC_NAME_MARKER}', snip)
+        if not mo:
+            msg = '[ERROR] AutoMatlab - ${MDOC_NAME_MARKER} is compulsory in ' \
+                'first line of mdoc snippet.'
+            self.view.window().status_message(msg)
+            return
+
+        mo = re.findall(r'^\W*\${MDOC_NAME}', snip)
+        if not mo:
+            msg = '[ERROR] AutoMatlab - ${MDOC_NAME} is compulsory as ' \
+                'first word of mdoc snippet.'
+            self.view.window().status_message(msg)
+            return
+
+        mo = re.search(r'^[^\n]*(\${MDOC_\w*_MARKER}).+', snip, re.M)
+        if mo:
+            msg = '[ERROR] AutoMatlab - ' + mo.group(1) + ' should be at end ' \
+                'of line in mdoc snippet.'
+            self.view.window().status_message(msg)
+            return
+
+        # insert function name and signature
+        snip = re.sub(r'\${MDOC_NAME}', fun, snip)
+        snip = re.sub(r'\${MDOC_SIGNATURE}', signature, snip)
+
+        # process input argument block
+        snip = self.compose_arg_snip_lines(snip, inargs,
+                                           'MDOC_INARG_BLOCK_MARKER',
+                                           'MDOC_INARG_MARKER', 'MDOC_INARG')
+        snip = self.compose_arg_snip_lines(snip, outargs,
+                                           'MDOC_OUTARG_BLOCK_MARKER',
+                                           'MDOC_OUTARG_MARKER', 'MDOC_OUTARG')
+        snip = self.compose_arg_snip_lines(snip, inargs + outargs,
+                                           'MDOC_ARG_BLOCK_MARKER',
+                                           'MDOC_ARG_MARKER', 'MDOC_ARG')
+        
+        # remove lines with just MARKERS
+        snip = re.sub(r'^[%\s]+\${\w+MARKER}', '%', snip, flags=re.M )
+        # remove sequential empty lines
+        snip = re.sub(r'^[%\s]+\n^[%\s]+$', '%', snip, flags=re.M )
+
+        # insert snippet
+        self.view.sel().clear()
+        self.view.sel().add(region1.end()+1)
+        self.view.run_command('insert_snippet', {'contents': snip + '\n\n'})
+
+    def shift_tab_indexes(self, snip, num=0, shift=1):
+        """Shift all tab indexes higher than num by shift
+        """
+        # get all tab indexes
+        mo = re.findall(r'\${(\d+):', snip)
+        if mo:
+            # shift tab indexes by shift
+            for i in range(max([int(i) for i in mo]), num, -1):
+                snip = re.sub(r'\${' + str(i) + r':',
+                              '${' + str(i + shift) + ':', snip)
+        return snip
+
+    def compose_arg_snip_lines(self, snip, args, mdoc_block_marker,
+                               mdoc_arg_marker, mdoc_arg):
+        """Compose function argument part of snippet, line by line
+        """
+        # check if argument block is specified in mdoc snippet
+        mo = re.search(r'^.*\${' + mdoc_block_marker + '}', snip, re.M)
+        if mo:
+            if args:
+                mo = re.search(
+                    r'^.*\${' + mdoc_arg_marker + '}.*$', snip, re.M)
+                if not (mo and re.search(r'\${' + mdoc_arg + '}', mo.group())):
+                    msg = '[ERROR] AutoMatlab - mdoc argument (marker) field' \
+                        'is missing for ${' + mdoc_block_marker + '}' \
+                        ' of mdoc snippet.'
+                    self.view.window().status_message(msg)
+                    return
+
+                # create argument line template and extract tab index
+                template = mo.group()
+                mo = re.search(r'\${(\d+):', template)
+                index = int(mo.group(1)) if mo else 0
+                shift = 0
+                # initialize with first argument snippet
+                args_snip = re.sub(r'\${' + mdoc_arg + '}', args[0], template)
+                for arg in args[1:]:
+                    # shift tab indexes in arg snippet template
+                    shift += 1
+                    template = self.shift_tab_indexes(template)
+                    # add arg to arg snip
+                    args_snip += '\n' + \
+                        re.sub(r'\${' + mdoc_arg + '}', arg, template)
+                # shift tab indexes in snippet
+                if index:
+                    snip = self.shift_tab_indexes(snip, index, shift)
+                # insert args_snip in snippet and return
+                return re.sub(r'^.*\${' + mdoc_arg_marker + '}.*$', args_snip,
+                              snip, flags=re.M)
+            else:
+                # clear argument related lines
+                snip = re.sub(r'^.*\${' + mdoc_arg_marker + '}.*$', '', snip,
+                              flags=re.M)
+                snip = re.sub(r'^.*\${' + mdoc_block_marker + '}.*$', '', snip,
+                              flags=re.M)
+        return snip
+
+    def a(g,d,f,h,i,k):
+        """One line summary
+        
+        Args:
+            g (TYPE): Description
+            d (TYPE): Description
+            f (TYPE): Description
+            i (TYPE): Description
+            h (TYPE): Description
+            here
+        adsfas
+        """
+        pass

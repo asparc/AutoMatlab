@@ -20,4 +20,23 @@
         ],
 
     },
+    {
+        "keys": ["ctrl+right"], 
+        "command": "navigate_auto_matlab", "args": {"amount": 0.0 },
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
+        ],
+
+    },
+    {
+        "keys": ["alt+q"], 
+        "command": "document_auto_matlab",
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+
+    },
 ]
