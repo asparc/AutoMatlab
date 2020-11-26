@@ -10,6 +10,9 @@
 %
 % Output:${MDOC_OUTARG_BLOCK_MARKER}
 %   - ${MDOC_OUTARG}: ${4:<description>}${MDOC_OUTARG_MARKER}
+% 
+% ${MDOC_ARG_BLOCK_MARKER}
+% ${MDOC_ARG}: ${5:<description>}${MDOC_ARG_MARKER}
 %
 % Author(s): ${6:<authors>}${MDOC_AUTHOR_MARKER}
 %

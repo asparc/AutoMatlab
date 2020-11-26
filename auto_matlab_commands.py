@@ -1,6 +1,6 @@
 import re
 from os import listdir, walk
-from os.path import join, normpath, isfile, isdir, abspath, split
+from os.path import join, normpath, isfile, isdir, isabs, abspath, split
 import json
 import pickle
 import collections
@@ -15,7 +15,7 @@ DEFAULT_MATLAB_INSTALL_DIRS = ('C:', 'C:/Program Files')
 SIGNATURES_NAME = 'functionSignatures.json'
 CONTENTS_NAME = 'Contents.m'
 COMPLETIONS_SAVE = join('data', 'completions')
-MDOC_SNIPPET_PATH = ('Snippets', 'mdoc.sublime-snippet')
+DEFAULT_MDOC_SNIPPET_PATH = ('AutoMatlab', 'Snippets', 'mdoc.sublime-snippet')
 
 
 def find_matlab(search):
@@ -258,9 +258,11 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
     """
 
     def run(self, edit):
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
+
         # read first line
         region1 = self.view.line(0)
-        line1 = (self.view.substr(region1))
+        line1 = self.view.substr(region1)
 
         # extract function definition components
         pattern = r'^\s*function\s+((?:\[(.*)\]\s*=|(\w+)\s*=|)' \
@@ -283,10 +285,25 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
         inargs = []
         if mo.group(5):
             inargs = [arg.strip() for arg in mo.group(5).split(',')]
+        if settings.get('mdoc_upper_case_signature', False):
+            signature = signature.upper()
+            fun = fun.upper()
+            inargs = [arg.upper() for arg in inargs]
+            outargs = [arg.upper() for arg in outargs]
 
         # read mdoc snippet
-        with open(join(*MDOC_SNIPPET_PATH)) as fh:
-            snip_all = fh.read()
+        snip_path = settings.get('mdoc_snippet_path', 
+            join(*DEFAULT_MDOC_SNIPPET_PATH))
+        print("----", snip_path)
+        if not isabs(snip_path):
+            snip_path = join(sublime.packages_path(), snip_path)
+        if isfile(snip_path):
+            with open(snip_path) as fh:
+                snip_all = fh.read()
+        else:
+            msg = '[ERROR] AutoMatlab - invalid mdoc snippet path.'
+            self.view.window().status_message(msg)
+            return
 
         # extract mdoc snippet content
         pattern = r'<!\[CDATA\[([\s\S]*)\]]>'
@@ -320,6 +337,28 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
             self.view.window().status_message(msg)
             return
 
+        # check if function is already documented
+        region2 = self.view.line(region1.end() + 1)
+        line2 = self.view.substr(region2)
+        if not re.search(r'\s*%+[\s%]*' + fun, line2):
+            # compose documentation snippet
+            snip = self.compose_documentation_snippet(snip, signature,
+                                                      fun, inargs, outargs)
+
+            # insert snippet
+            self.view.sel().clear()
+            self.view.sel().add(region1.end() + 1)
+            self.view.run_command(
+                'insert_snippet', {'contents': snip + '\n\n'})
+        else:
+            msg = '[Warning] AutoMatlab - documentation already exists.'
+            self.view.window().status_message(msg)
+            return
+
+    def compose_documentation_snippet(self, snip, signature,
+                                      fun, inargs, outargs):
+        """Compose new documentation snippet based on function signature
+        """
         # insert function name and signature
         snip = re.sub(r'\${MDOC_NAME}', fun, snip)
         snip = re.sub(r'\${MDOC_SIGNATURE}', signature, snip)
@@ -334,27 +373,12 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
         snip = self.compose_arg_snip_lines(snip, inargs + outargs,
                                            'MDOC_ARG_BLOCK_MARKER',
                                            'MDOC_ARG_MARKER', 'MDOC_ARG')
-        
+
         # remove lines with just MARKERS
-        snip = re.sub(r'^[%\s]+\${\w+MARKER}', '%', snip, flags=re.M )
+        snip = re.sub(r'^[%\s]+\${\w+MARKER}', '%', snip, flags=re.M)
         # remove sequential empty lines
-        snip = re.sub(r'^[%\s]+\n^[%\s]+$', '%', snip, flags=re.M )
+        snip = re.sub(r'^[%\s]+\n^[%\s]+$', '%', snip, flags=re.M)
 
-        # insert snippet
-        self.view.sel().clear()
-        self.view.sel().add(region1.end()+1)
-        self.view.run_command('insert_snippet', {'contents': snip + '\n\n'})
-
-    def shift_tab_indexes(self, snip, num=0, shift=1):
-        """Shift all tab indexes higher than num by shift
-        """
-        # get all tab indexes
-        mo = re.findall(r'\${(\d+):', snip)
-        if mo:
-            # shift tab indexes by shift
-            for i in range(max([int(i) for i in mo]), num, -1):
-                snip = re.sub(r'\${' + str(i) + r':',
-                              '${' + str(i + shift) + ':', snip)
         return snip
 
     def compose_arg_snip_lines(self, snip, args, mdoc_block_marker,
@@ -402,16 +426,14 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
                               flags=re.M)
         return snip
 
-    def a(g,d,f,h,i,k):
-        """One line summary
-        
-        Args:
-            g (TYPE): Description
-            d (TYPE): Description
-            f (TYPE): Description
-            i (TYPE): Description
-            h (TYPE): Description
-            here
-        adsfas
+    def shift_tab_indexes(self, snip, num=0, shift=1):
+        """Shift all tab indexes higher than num by shift
         """
-        pass
+        # get all tab indexes
+        mo = re.findall(r'\${(\d+):', snip)
+        if mo:
+            # shift tab indexes by shift
+            for i in range(max([int(i) for i in mo]), num, -1):
+                snip = re.sub(r'\${' + str(i) + r':',
+                              '${' + str(i + shift) + ':', snip)
+        return snip
