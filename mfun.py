@@ -28,14 +28,16 @@ class mfun:
 
         # read mfile line by line
         with open(self.path, encoding='cp1252') as fh:
-            try:
-                line = fh.readline()
-            except:
-                return
-
+            # find first non-empty line
+            line = ""
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    return
+                    
             # check validity of first line
-            if len(line.strip()) == 0 or not ('function' in line
-                                              or line.strip()[0] == '%'):
+            if not ('function' in line or line.strip()[0] == '%'):
                 return
 
             # prepare regex patterns

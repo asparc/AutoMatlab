@@ -1,6 +1,7 @@
 import re
 from os import listdir, walk
-from os.path import join, normpath, isfile, isdir, isabs, abspath, split
+from os.path import join, normpath, isfile, isdir, \
+    isabs, abspath, split, expanduser
 import json
 import pickle
 import collections
@@ -11,14 +12,15 @@ import sublime_plugin
 from .mfun import mfun
 
 # constants
-DEFAULT_MATLAB_INSTALL_DIRS = ('C:', 'C:/Program Files')
+DEFAULT_MATLABROOT = ('C:', 'C:/Program Files')
+DEFAULT_MATLAB_PATHDEF_PATH = 'toolbox/local/pathdef.m'
 SIGNATURES_NAME = 'functionSignatures.json'
 CONTENTS_NAME = 'Contents.m'
-COMPLETIONS_SAVE = join('data', 'completions')
-DEFAULT_MDOC_SNIPPET_PATH = ('AutoMatlab', 'Snippets', 'mdoc.sublime-snippet')
+COMPLETIONS_SAVE = 'data/completions'
+DEFAULT_MDOC_SNIPPET_PATH = 'AutoMatlab/Snippets/mdoc.sublime-snippet'
 
 
-def find_matlab(search):
+def find_matlabroot(search):
     """Find the Matlab installation directory.
     """
     def search_dir(d):
@@ -43,7 +45,7 @@ def find_matlab(search):
 
     # check different search options
     if search == 'default':
-        for d in DEFAULT_MATLAB_INSTALL_DIRS:
+        for d in DEFAULT_MATLABROOT:
             res = search_dir(normpath(d))
             if res:
                 return res
@@ -58,7 +60,7 @@ def process_signature(signature):
 
     Although functionSignatures.json contains the autocompletion information
     that Matlab natively uses, only the function names are extracted from this
-    file by AutoMatlab. The reason is that the autocompletion information in 
+    file by AutoMatlab. The reason is that the autocompletion information in
     functionSignatures.json is very inconsistent and incomplete.
     """
     if not isfile(signature):
@@ -97,7 +99,7 @@ def process_signature(signature):
 def process_contents(contents):
     """Process a Contents.m file to extract Matlab function names from it.
 
-    This function expects the default Matlab structure of Contents.m files. 
+    This function expects the default Matlab structure of Contents.m files.
     Unfortunately, this structure is not always faithfully applied, in which
     case AutoMatlab won't recognize the functions.
     """
@@ -129,6 +131,54 @@ def process_contents(contents):
     return funs
 
 
+def process_pathdef(matlab_pathdef_path, matlabroot):
+    """Process pathdef.m file to extract all directories in the Matlab path.
+    """
+    matlab_path_dirs = []
+    abs_dir_regex = re.compile(r"'(.+);'")
+    rel_dir_regex = re.compile(r"'[\\\/]*(.+);'")
+
+    # check if matlab_pathdef_path is absolute path
+    if not isabs(expanduser(normpath(matlab_pathdef_path))):
+        matlab_pathdef_path = join(matlabroot,
+                                   expanduser(normpath(matlab_pathdef_path)))
+
+    if not isfile(matlab_pathdef_path):
+        return []
+
+    # open pathdef file
+    with open(join(matlabroot, normpath(matlab_pathdef_path)),
+              encoding='cp1252') as fh:
+        line = fh.readline()
+        process_line = False
+
+        # read line by line
+        while line:
+            # stop processing at END ENTRIES
+            if 'END ENTRIES' in line:
+                break
+            # process lines containing directories
+            if process_line:
+                if 'matlabroot' in line:
+                    # ensure dir is extracted as relative dir
+                    mo = rel_dir_regex.search(line)
+                    if mo:
+                        matlab_path_dirs.append(join(matlabroot,
+                                                     normpath(mo.group(1))))
+                else:
+                    # read dir as absolute dir
+                    mo = abs_dir_regex.search(line)
+                    if mo:
+                        matlab_path_dirs.append(normpath(mo.group(1)))
+            # start processing at BEGIN ENTRIES
+            if 'BEGIN ENTRIES' in line:
+                process_line = True
+            # read next line
+            line = fh.readline()
+
+    return matlab_path_dirs
+
+
 class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
 
     """Generate Matlab autocompletion information by parsing the
@@ -142,72 +192,117 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
 
         # read settings
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
-        matlab_search_dir = settings.get('matlab_install_dir', 'default')
+        matlab_search_dir = settings.get('matlabroot', 'default')
+        matlab_pathdef_path = settings.get('matlab_pathdef_path',
+                                           DEFAULT_MATLAB_PATHDEF_PATH)
         include_dirs = settings.get('include_dirs', [])
         exclude_dirs = settings.get('exclude_dirs', [])
-        contents_files = settings.get('contents_files', 'dir')
-        signatures_files = settings.get('signatures_files', 'dir')
+        exclude_patterns = settings.get('exclude_patterns', [])
+        use_contents_files = settings.get('use_contents_files', 'dir')
+        use_signatures_files = settings.get('use_signatures_files', 'dir')
+        use_matlab_path = settings.get('use_matlab_path', 'ignore')
 
         # assertions
         try:
             assert type(matlab_search_dir) == str, \
-                "[ERROR] AutoMatlab - matlab_install_dir is not of type 'str'"
+                "[ERROR] AutoMatlab - matlabroot is not of type 'str'"
+            assert type(matlab_pathdef_path) == str, \
+                "[ERROR] AutoMatlab - matlab_pathdef_path is not of type 'str'"
             assert type(include_dirs) == list, \
                 "[ERROR] AutoMatlab - include_dirs is not of type 'list'"
             assert type(exclude_dirs) == list, \
                 "[ERROR] AutoMatlab - exclude_dirs is not of type 'list'"
-            assert contents_files in ['dir', 'read', 'ignore'], \
-                "[ERROR] AutoMatlab - Invalid value for 'contents_files'"
-            assert signatures_files in ['dir', 'read', 'ignore'], \
-                "[ERROR] AutoMatlab - Invalid value for 'signatures_files'"
+            assert type(exclude_patterns) == list, \
+                "[ERROR] AutoMatlab - exclude_patterns is not of type 'list'"
+            assert use_contents_files in ['dir', 'read', 'ignore'], \
+                "[ERROR] AutoMatlab - Invalid value for 'use_contents_files'"
+            assert use_signatures_files in ['dir', 'read', 'ignore'], \
+                "[ERROR] AutoMatlab - Invalid value for 'use_signatures_files'"
+            assert use_matlab_path in ['dir', 'read', 'ignore'], \
+                "[ERROR] AutoMatlab - Invalid value for 'use_signatures_files'"
         except Exception as e:
             self.window.status_message(str(e))
             raise e
 
         # check if matlab installation can be found
-        matlab_install_dir = find_matlab(matlab_search_dir)
-        if not matlab_install_dir:
-            msg = '[ERROR] AutoMatlab - Matlab installation could not be found'
+        matlabroot = find_matlabroot(matlab_search_dir)
+        if not matlabroot:
+            msg = '[ERROR] AutoMatlab - Matlab installation could not be' \
+                'found at specified location'
             self.window.status_message(msg)
             raise Exception(msg)
             return
 
-        # prepend include_dirs and check if they exist
-        include_dirs = [normpath(join(matlab_install_dir, d))
-                        for d in include_dirs
-                        if isdir(join(matlab_install_dir, d))]
-
-        # prepend exclude_dirs
-        exclude_dirs = [normpath(join(matlab_install_dir, d))
+        # process and complete include/exclude dirs
+        include_dirs = [expanduser(normpath(d))
+                        if isabs(expanduser(normpath(d)))
+                        else expanduser(normpath(join(matlabroot, d)))
+                        for d in include_dirs]
+        exclude_dirs = [expanduser(normpath(d))
+                        if isabs(expanduser(normpath(d)))
+                        else expanduser(normpath(join(matlabroot, d)))
                         for d in exclude_dirs]
 
+        # read the matlab path and parse its dirs
+        if use_matlab_path in ['dir', 'read']:
+            # get dirs in matlab path
+            matlab_path_dirs = process_pathdef(matlab_pathdef_path, matlabroot)
+            if not matlab_path_dirs:
+                msg = '[ERROR] AutoMatlab - Specified pathdef.m is invalid'
+                self.window.status_message(msg)
+                raise Exception(msg)
+                return
+
+            # parse dirs in matlab path
+            for path_dir in matlab_path_dirs:
+                if isdir(path_dir):
+                    for file in listdir(path_dir):
+                        self.compose_completion(mfun(join(path_dir, file)))
+
         # walk through files of matlab toolboxes
-        for root, dirs, files in walk(join(matlab_install_dir, 'toolbox')):
-            if 'demo' in root or '+' in root or '@' in root \
-                    or any([d for d in exclude_dirs if d in root]):
+        for root, dirs, files in walk(join(matlabroot, 'toolbox')):
+            # check exclude dirs and patterns
+            if any([d for d in exclude_dirs if root.startswith(d)]) \
+                    or any([p for p in exclude_patterns if p in root]):
                 continue
 
             # process entire dirs
-            if (signatures_files == 'dir' and SIGNATURES_NAME in files) \
-                    or (contents_files == 'dir' and CONTENTS_NAME in files):
+            if (use_signatures_files == 'dir' and SIGNATURES_NAME in files) \
+                    or (use_contents_files == 'dir' and CONTENTS_NAME in files):
                 for file in files:
                     self.compose_completion(mfun(join(root, file)))
                 continue
 
             # process signature files
-            if signatures_files == 'read' and SIGNATURES_NAME in files:
+            if use_signatures_files == 'read' and SIGNATURES_NAME in files:
                 for fun in process_signature(join(root, SIGNATURES_NAME)):
                     self.compose_completion(mfun(join(root, fun + '.m')))
 
             # process contents files
-            if contents_files == 'read' and CONTENTS_NAME in files:
+            if use_contents_files == 'read' and CONTENTS_NAME in files:
                 for fun in process_contents(join(root, CONTENTS_NAME)):
                     self.compose_completion(mfun(join(root, fun + '.m')))
 
         # parse custom dirs
-        for root in include_dirs:
-            for file in listdir(root):
-                self.compose_completion(mfun(join(root, file)))
+        for include_dir in include_dirs:
+            parse_subdirs = False
+            if include_dir[-1] == '*':
+                include_dir = include_dir[:-1]
+                parse_subdirs = True
+            for root, dirs, files in walk(include_dir):
+                # extract completion from file
+                for f in files:
+                    self.compose_completion(mfun(join(root, f)))
+                # set which subdirs to include
+                if parse_subdirs:
+                    # subject to exclude patterns all
+                    dirs[:] = [d for d in dirs
+                        if not any([p for p in exclude_patterns if p in d])]
+                else:
+                    # exclude all
+                    dirs[:] = []
+
+        print(self.completions.keys())
 
         # sort results
         sorted_completions = collections.OrderedDict(
@@ -215,7 +310,7 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
 
         # store results
         with open(join(split(abspath(__file__))[0],
-                       COMPLETIONS_SAVE), "bw") as fh:
+                       normpath(COMPLETIONS_SAVE)), 'bw') as fh:
             pickle.dump(sorted_completions, fh)
 
         self.window.status_message(
@@ -227,7 +322,7 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
             return
 
         # add data to completions
-        self.completions[mfun.fun.lower()] = [mfun.fun,
+        self.completions[mfun.fun.lower()]=[mfun.fun,
                                               mfun.annotation, mfun.path]
 
 
@@ -292,9 +387,9 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
             outargs = [arg.upper() for arg in outargs]
 
         # read mdoc snippet
-        snip_path = settings.get('mdoc_snippet_path', 
-            join(*DEFAULT_MDOC_SNIPPET_PATH))
-        print("----", snip_path)
+        snip_path = normpath(settings.get('mdoc_snippet_path',
+                                          DEFAULT_MDOC_SNIPPET_PATH))
+        print('----', snip_path)
         if not isabs(snip_path):
             snip_path = join(sublime.packages_path(), snip_path)
         if isfile(snip_path):

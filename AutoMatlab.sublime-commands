@@ -1,6 +1,6 @@
 [
     {
-    	"caption": "AutoMatlab: Generate Completions",
+    	"caption": "AutoMatlab: Generate Completions [BLOCKING]",
     	"command": "generate_auto_matlab"
     },
 ]

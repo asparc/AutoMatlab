@@ -1,56 +1,88 @@
 {
     // Matlab installation directory
-    // If set to 'default', AutoMatlab will search in:
+    // If set to `default`, AutoMatlab will search in:
     // - C:/Matlab/RXXXXX
     // - C:/Program Files/MATLAB/RXXXXX'
-    "matlab_install_dir": "default",
+    "matlabroot": "default",
 
-    // Additional include_dirs below matlab installation dir
+    // Additional dirs to include for autocompletion generation.
+    // Relative paths expanded wrt the matlabroot 
+    // The ~ specifies the user home directory
+    // The wildcard * can be used to include subdirectoriess as well,
+    // but the subdirectories are subject to the exclude patterns
     "include_dirs":
     [
        "toolbox/shared/controllib/engine/@DynamicSystem",
        "toolbox/shared/controllib/engine/@StaticModel",
+       "/home/caspar/Desktop/toolbox/control/ctrldesign/@ss",
        "toolbox/matlab/matfun",
+       "~/Documents/MATLAB/*",
     ],
 
-    // Specific dirs to exclude below the matlab installation dir
+    // Specific dirs to exclude from autocomplete generation
+    // Relative paths are expanded wrt the matlabroot
     "exclude_dirs":
     [
        "toolbox/local",
+       "toolbox/matlab/helptools",
+       "toolbox/rtw",
+       "toolbox/target",
+    ],
+
+    // Specific patterns to exclude from autocompletion generation
+    // These patterns only apply to directories, not to filenames
+    "exclude_patterns":
+    [
+       "@", "+", "demo", "example", "+matlab", "+internal", "private"
     ],
 
     // Matlab contains summaries of functions in Contents.m files
     // AutoMatlab can look for the Contents.m files and:
-    // 'ignore': don't use Contents.m files for completions
-    // 'read': read Contents.m files for completions
-    // 'dir': search in dir of Contents.m files for completions
-    "contents_files": "dir",
+    // `ignore`: don't use Contents.m files for completions
+    // `read`: read Contents.m files for completions
+    // `dir`: search in dir of Contents.m files for completions
+    "use_contents_files": "dir",
 
     // Matlab stores its autocompletion metadata in functionSignatures.json files
     // AutoMatlab can look for the functionSignatures.json files and:
-    // 'ignore': don't use functionSignatures.json files for completions
-    // 'read': read functionSignatures.json files for completions
-    // 'dir': search in dir of functionSignatures.json files for completions
-    "signatures_files": "dir",
+    // `ignore`: don't use functionSignatures.json files for completions
+    // `read`: read functionSignatures.json files for completions
+    // `dir`: search in dir of functionSignatures.json files for completions
+    "use_signatures_files": "dir",
+
+    // Matlab stores its path in the file pathdef.m0
+    // Automatlab can look for this file and:
+    // `ignore`: don't use the matlab path for completions
+    // `dir`: read all directories in the matlab path for completions
+    "use_matlab_path": "ignore",
+
+    // Path to the pathdef.m file (relative to matlabroot)
+    "matlab_pathdef_path": "toolbox/local/pathdef.m",
+
+    // // Directories found using the `dir` option of `use_contents_files`, 
+    // // `use_signature_files` or `use_matlab_path` can contain 
+    // // package directories (starting with a `+`). Specify whether to 
+    // // parse these package directories as well for completions:
+    // "parse_package_dirs": true,
 
     // Show a popup with detailed function documentation upon an exact match
     // with the autocompletion trigger of a function
     "documentation_popup": true,
 
     // Sublime Text lets you navigate the completion list
-    // with 'up/down', forcing you to press 'esc' when you
+    // with `up/down`, forcing you to press `esc` when you
     // want to move the cursor to another line. This option
-    // keeps up/down for navigating your document, while
-    // ctrl+up/down are for navigation the autocompletion.
+    // keeps `up/down` for navigating your document, while
+    // `ctrl+up/down` is used for navigating the autocompletion list.
     "ctrl_completion_navigation": true,
 
-    // With option ctrl_completion_navigation set to true,
-    // it is convenient to use ctlr+right to commit
+    // With the option `ctrl_completion_navigation` set to `true`,
+    // it is convenient to use `ctlr+right` to commit
     // the current completion suggestion
     "ctrl_right_commit": true,
 
     // Path to snippet template for AutoMatlab documentation generation.
-    // This snippet template can be modified as desired.
+    // This snippet template can be modified if desired.
     "mdoc_snippet_path": "AutoMatlab/Snippets/mdoc.sublime-snippet",
 
     // Matlab's documentation specifies function/class signatures in upper
