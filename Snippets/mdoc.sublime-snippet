@@ -17,6 +17,5 @@
 %
 % Copyright ${8:<year>} ${9:<owner>}${MDOC_COPYRIGHT_MARKER}
 ]]></content>
-<tabTrigger>mdoc</tabTrigger>
 <scope>source.matlab</scope>
 </snippet>

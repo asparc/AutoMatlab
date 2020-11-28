@@ -183,8 +183,6 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
 
     """Generate Matlab autocompletion information by parsing the
     current Matlab installation.
-
-    TODO: Run in separate thread.
     """
 
     def run(self):
@@ -348,8 +346,6 @@ class NavigateAutoMatlabCommand(sublime_plugin.TextCommand):
 class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
 
     """Generate a snippet for documenting matlab functions
-
-    TODO: add matlab classes
     """
 
     def run(self, edit):
@@ -389,7 +385,6 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
         # read mdoc snippet
         snip_path = normpath(settings.get('mdoc_snippet_path',
                                           DEFAULT_MDOC_SNIPPET_PATH))
-        print('----', snip_path)
         if not isabs(snip_path):
             snip_path = join(sublime.packages_path(), snip_path)
         if isfile(snip_path):
@@ -442,9 +437,13 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
 
             # insert snippet
             self.view.sel().clear()
-            self.view.sel().add(region1.end() + 1)
-            self.view.run_command(
-                'insert_snippet', {'contents': snip + '\n\n'})
+            self.view.sel().add(region1.end()+1)
+            if self.view.size() == region1.size():
+                self.view.run_command(
+                    'insert_snippet', {'contents': '\n' + snip + '\n\n'})
+            else:
+                self.view.run_command(
+                    'insert_snippet', {'contents': snip + '\n\n'})
         else:
             msg = '[Warning] AutoMatlab - documentation already exists.'
             self.view.window().status_message(msg)

@@ -141,7 +141,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         behaviour. Mainly focused on reloading the completion list and
         on hiding the function details popup.
         """
-        if not view.match_selector(view.sel()[0].a, 'source.matlab'):
+        if not view.match_selector(0, 'source.matlab'):
             return []
 
         if view.is_auto_complete_visible() \
@@ -166,7 +166,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         behaviour. Mainly focused on reloading the completion list and
         on hiding the function details popup.
         """
-        if not view.match_selector(view.sel()[0].a, 'source.matlab'):
+        if not view.match_selector(0, 'source.matlab'):
             return []
 
         # make sure popup disappears together with autocomplete
