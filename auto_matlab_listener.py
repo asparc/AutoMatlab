@@ -1,24 +1,26 @@
-from os.path import join, abspath, split, isfile, getmtime
 import random
 import pickle
 import collections
 import re
+import threading
+from os import walk
+from os.path import isfile, splitext, getmtime, join
 
 import sublime
 import sublime_plugin
 
-from .mfun import mfun
 
-# directory for saving completion data
-COMPLETIONS_SAVE = join('data', 'completions')
+def plugin_loaded():
+    """Do imports that need to wait for Sublime API initilization
+    """
+    global abspath, mfun, constants
+    import AutoMatlab.lib.constants as constants
+    from AutoMatlab.lib.common import abspath
+    from AutoMatlab.lib.mfun import mfun
 
-# dict containter for storing completion data
-completions = collections.OrderedDict({})
-# last modification time for completion data
-completions_mtime = 0
 
 # some Matlab easter eggs
-easter = ['spy', 'life', 'why', 'toilet', 'image', 'lala', 'penny', 'shower',
+EASTER = ['spy', 'life', 'why', 'toilet', 'image', 'lala', 'penny', 'shower',
           'viper', 'fuc*', 'tetris_2', 'rlc_gui', 'sf_tictacflow', 'eml_fire',
           'eml_asteroids', 'xpsound', 'xpquad', 'wrldtrv', 'vibes', 'truss',
           'makevase', 'lorenz', 'knot', 'imageext', 'eigshow', 'earthmap',
@@ -26,55 +28,24 @@ easter = ['spy', 'life', 'why', 'toilet', 'image', 'lala', 'penny', 'shower',
           'imagesAndVideo', 'step', 'fifteen', 'xpbombs', 'penny']
 
 
-def load_completions():
-    """Load stored completion data into completion dict
-    """
-    # check if completions data exists
-    completions_path = join(split(abspath(__file__))[0], COMPLETIONS_SAVE)
-    if isfile(completions_path):
-        global completions, completions_mtime
-
-        # check for update of completions data
-        mtime = getmtime(completions_path)
-        if mtime > completions_mtime:
-            completions_mtime = mtime
-
-            # read completions
-            with open(completions_path, 'br') as fh:
-                completions = pickle.load(fh)
-
-
-def create_hrefs(details):
-    """Detailed Matlab function documentation contains references to 
-    other function ("see also"). Extract these references and wrap them
-    in html href tags.
-    """
-    # locate 'see also'
-    see_regex = re.compile(r'<p>see also:?\s*(.*?)\.?<\/p>', re.I)
-    mo_see = see_regex.search(details)
-
-    # extract referred functions
-    if mo_see:
-        hrefs_see = mo_see.group()
-        for parts in mo_see.group(1).split(','):
-            for ref in parts.split('<br>'):
-                ref = ref.strip()
-                # check if completions exist for function
-                if ref and completions.get(ref.lower()):
-                    # compose href for function
-                    href = '<a href="{}">{}</a>'.format(ref.lower(), ref)
-                    href_regex = r'\b' + ref + r'\b'
-                    hrefs_see = re.sub(href_regex, href, hrefs_see)
-        # replace referred function with href
-        details = details.replace(mo_see.group(), hrefs_see)
-
-    return details
-
-
 class AutoMatlab(sublime_plugin.EventListener):
 
     """AutoMatlab event lister
     """
+
+    def __init__(self):
+        # containters for completion data
+        self.matlab_completions = collections.OrderedDict({})
+        self.project_completions = collections.OrderedDict({})
+        self.loaded_project_completions = {}
+        # last modification time for completion data
+        self.matlab_completions_mtime = 0
+        self.loaded_project_completions_mtime = {}
+        # threading
+        self.load_project_thread = threading.Thread()
+        self.project_completions_lock = threading.Lock()
+        # flags
+        self.warned = False
 
     def on_query_completions(self, view, prefix, locations):
         """Construct AutoMatlab completion list.
@@ -88,8 +59,14 @@ class AutoMatlab(sublime_plugin.EventListener):
         if not view.match_selector(locations[0], 'source.matlab'):
             return []
 
-        # reload completions if necessary
-        load_completions()
+        # load matlab completions
+        self.load_matlab_completions(view.window())
+
+        # load project completions
+        self.project_completions_lock.acquire()
+        self.project_completions = self.loaded_project_completions.get(
+            view.window().extract_variables().get('project_base_name'), {})
+        self.project_completions_lock.release()
 
         # ignore case
         prefix = prefix.lower()
@@ -98,18 +75,20 @@ class AutoMatlab(sublime_plugin.EventListener):
         out = []
 
         # check for exact match
-        exact = completions.get(prefix)
+        exact = self.project_completions.get(prefix)
+        if not exact:
+            exact = self.matlab_completions.get(prefix)
         if exact:
             # read mfun from mfile to extract all data
             mfun_data = mfun(exact[2])
             if mfun_data.valid:
-                mfun_data.details = create_hrefs(mfun_data.details)
+                mfun_data.details = self.create_hrefs(mfun_data.details)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
                 if len(out) == 1:
                     out.append([mfun_data.fun + '\t Easter Egg',
-                                easter[random.randrange(len(easter))]])
+                                EASTER[random.randrange(len(EASTER))]])
 
                 # load settings to see if documentation popup should be shown
                 settings = sublime.load_settings('AutoMatlab.sublime-settings')
@@ -123,18 +102,38 @@ class AutoMatlab(sublime_plugin.EventListener):
                     self.popup_view = view
         else:
             out = [[data[0] + '\t' + data[1], data[0]]
-                   for fun, data in completions.items()
+                   for fun, data in self.project_completions.items()
+                   if fun.startswith(prefix)] \
+                + [[data[0] + '\t' + data[1], data[0]]
+                   for fun, data in self.matlab_completions.items()
                    if fun.startswith(prefix)]
-
         return out
 
-    def update_details_popup(self, fun):
-        """Process clicks on hrefs in the function details popup
+    def on_post_save(self, view):
+        """Update project completions upon saving of mfile
         """
-        mfun_data = mfun(completions.get(fun)[2])
-        if mfun_data.valid:
-            mfun_data.details = create_hrefs(mfun_data.details)
-            self.popup_view.update_popup(mfun_data.details)
+        if not view.match_selector(0, 'source.matlab'):
+            return
+
+        # create project completions
+        self.load_project_completions_thread(view.window())
+
+    def on_activated(self, view):
+        """Create project completions upon first loading of mfile
+        """
+        if not view.match_selector(0, 'source.matlab'):
+            return
+
+        # check if project already exists
+        self.project_completions_lock.acquire()
+        loaded_projects = self.loaded_project_completions.keys()
+        self.project_completions_lock.release()
+        if view.window().extract_variables().get('project_base_name') \
+                in loaded_projects:
+            return
+
+        # create project completions
+        self.load_project_completions_thread(view.window())
 
     def on_text_command(self, view, command_name, args):
         """Redefine a number of sublime commands to obtain smoother
@@ -174,3 +173,192 @@ class AutoMatlab(sublime_plugin.EventListener):
                 or (view.is_popup_visible()
                     and not view.is_auto_complete_visible()):
             view.run_command('hide_popup')
+
+    def load_project_completions_thread(self, window):
+        """Start worker thread to load project completions
+        """
+        # check if thread is already running
+        if self.load_project_thread.is_alive():
+            return
+        else:
+            # create and start worker thread
+            self.load_project_thread = threading.Thread(
+                target=self.load_project_completions,
+                args=(window.extract_variables(),
+                      window.project_data(),
+                      window.folders()))
+            self.load_project_thread.start()
+
+    def load_project_completions(self, project_vars, project_data,
+                                 project_folders):
+        """Load project-specific completion data into completion dict
+        """
+        completions = {}
+
+        # get project
+        project = project_vars.get('project_base_name')
+        folder = project_vars.get('folder')
+        if not project or not folder:
+            return None
+
+        # get last update time for project completions
+        if not self.loaded_project_completions_mtime.get(project):
+            self.loaded_project_completions_mtime[project] = 0
+        completions_mtime = self.loaded_project_completions_mtime[project]
+        last_mtime = completions_mtime
+
+        # get project dirs
+        include_dirs = None
+        exclude_dirs = []
+        exclude_patterns = []
+        project_settings = project_data.get('auto_matlab')
+        if project_settings:
+            # read project dirs from settings
+            include_dirs = abspath(project_settings.get('include_dirs', None),
+                                   folder, project_vars)
+            exclude_dirs = abspath(project_settings.get('exclude_dirs', []),
+                                   folder, project_vars)
+            exclude_patterns = project_settings.get('exclude_patterns', [])
+        if include_dirs == None:
+            # set default project dirs if unspecified
+            # (and also apply the exclude dirs)
+            include_dirs = [abspath('*', d)
+                            for d in project_folders
+                            if not any([excl for excl in exclude_dirs
+                                        if abspath(d).startswith(excl)])]
+        if not include_dirs:
+            return None
+
+        # parse project include dirs
+        for include in include_dirs:
+            # check wildcard
+            if not include:
+                continue
+            wildcard = include[-1]
+            if wildcard in ['+', '*']:
+                include = include[:-1]
+            for root, dirs, files in walk(include):
+                # process file for completions
+                for f in files:
+                    # check if matlab file
+                    [fun, ext] = splitext(f)
+                    if not ext == '.m':
+                        continue
+
+                    # check if file changed since last time
+                    file_mtime = getmtime(join(root, f))
+                    if file_mtime > completions_mtime:
+                        if file_mtime > last_mtime:
+                            last_mtime = file_mtime
+                        # read mfun
+                        mfun_data = mfun(join(root, f))
+                        if not mfun_data.valid:
+                            continue
+
+                        # add data to matlab completions
+                        completions[mfun_data.fun.lower()] = \
+                            [mfun_data.fun, mfun_data.annotation,
+                             mfun_data.path]
+                    else:
+                        # copy previous completion
+                        prev_completion = self.loaded_project_completions.get(
+                            project, {}).get(fun)
+                        if prev_completion:
+                            completions[fun] = prev_completion
+                # set which subdirs to include
+                if wildcard == '+':
+                    # only include package dirs and apply exclude dirs/patterns
+                    dirs[:] = \
+                        [d for d in dirs
+                         if d.startswith('+')
+                            and not(any([excl for excl in exclude_dirs
+                                         if abspath(d, root).startswith(excl)])
+                                    or any([excl for excl in exclude_patterns
+                                            if excl in d and not excl == "+"]))]
+                elif wildcard == '*':
+                    # apply exclude dirs/patterns
+                    dirs[:] = \
+                        [d for d in dirs
+                         if not(any([excl for excl in exclude_dirs
+                                     if abspath(d, root).startswith(excl)])
+                                or any([excl for excl in exclude_patterns
+                                        if excl in d]))]
+                else:
+                    # exclude all
+                    dirs[:] = []
+
+        # sort the completions
+        sorted_completions = collections.OrderedDict(
+            sorted(completions.items()))
+
+        # update project completions modified time and dict
+        self.project_completions_lock.acquire()
+        self.loaded_project_completions[project] = sorted_completions
+        self.project_completions_lock.release()
+        self.loaded_project_completions_mtime[project] = last_mtime
+
+    def load_matlab_completions(self, window):
+        """Load stored matlab completion data into completion dict
+        """
+        # check if matlab_completions data exists
+        if isfile(constants.MATLAB_COMPLETIONS_PATH):
+            # check for update of matlab_completions data
+            mtime = getmtime(constants.MATLAB_COMPLETIONS_PATH)
+            if mtime > self.matlab_completions_mtime:
+                self.matlab_completions_mtime = mtime
+
+                # read matlab_completions
+                with open(constants.MATLAB_COMPLETIONS_PATH, 'br') as fh:
+                    self.matlab_completions = pickle.load(fh)
+        else:
+            if not self.warned:
+                self.warned = True
+                msg = '[WARNING] AutoMatlab - No Matlab completions found. ' \
+                    'Try generating them through the command palette.'
+                print(msg)
+                window.status_message(msg)
+
+    def create_hrefs(self, details):
+        """Detailed Matlab function documentation contains references to
+        other function ("see also"). Extract these references and wrap them
+        in html href tags.
+        """
+        # locate 'see also'
+        see_regex = re.compile(r'<p>see also:?\s*(.*?)\.?<\/p>', re.I)
+        mo_see = see_regex.search(details)
+
+        # extract referred functions
+        if mo_see:
+            hrefs_see = mo_see.group()
+            for parts in mo_see.group(1).split(','):
+                for ref in parts.split('<br>'):
+                    ref = ref.strip()
+                    if ref:
+                        # check if completions exist for referred function
+                        linkable = self.project_completions.get(ref.lower())
+                        if not linkable:
+                            linkable = self.matlab_completions.get(ref.lower())
+                        if linkable:
+                            # compose href for function
+                            href = '<a href="{}">{}</a>'.format(ref.lower(),
+                                                                ref)
+                            href_regex = r'\b' + ref + r'\b'
+                            hrefs_see = re.sub(href_regex, href, hrefs_see)
+            # replace referred function with href
+            details = details.replace(mo_see.group(), hrefs_see)
+
+        return details
+
+    def update_details_popup(self, fun):
+        """Process clicks on hrefs in the function details popup
+        """
+        # get mfun data from project or matlab completions
+        if fun in self.project_completions.keys():
+            mfun_data = mfun(self.project_completions.get(fun)[2])
+        else:
+            mfun_data = mfun(self.matlab_completions.get(fun)[2])
+
+        # update popup contents
+        if mfun_data.valid:
+            mfun_data.details = self.create_hrefs(mfun_data.details)
+            self.popup_view.update_popup(mfun_data.details)

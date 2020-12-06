@@ -6,21 +6,26 @@
     "matlabroot": "default",
 
     // Additional dirs to include for autocompletion generation.
-    // Relative paths expanded wrt the matlabroot 
-    // The ~ specifies the user home directory
-    // The wildcard * can be used to include subdirectoriess as well,
-    // but the subdirectories are subject to the exclude patterns
+    // - Relative paths are expanded wrt the matlabroot 
+    // - The ~ expands to the user home directory
+    // - The wildcard * includes all subdirs below an include_dir,
+    //   but the exclude_dirs/patterns apply to the subdirs
+    // - The wildcard + includes all package dirs below an include_dir,
+    //   but the exclude_dirs/patterns apply to the package dirs 
+    //   (except for the exclude_pattern "+", if present)
     "include_dirs":
     [
-       "toolbox/shared/controllib/engine/@DynamicSystem",
-       "toolbox/shared/controllib/engine/@StaticModel",
-       "/home/caspar/Desktop/toolbox/control/ctrldesign/@ss",
-       "toolbox/matlab/matfun",
-       "~/Documents/MATLAB/*",
+       // "toolbox/shared/controllib/engine/@DynamicSystem",
+       // "toolbox/shared/controllib/engine/@StaticModel",
+       // "toolbox/control/ctrldesign/@ss",
+       // "toolbox/matlab/matfun",
+       // "~/Documents/MATLAB/*",
+       // "~/Documents/MATLAB/lib/+",
     ],
 
     // Specific dirs to exclude from autocomplete generation
-    // Relative paths are expanded wrt the matlabroot
+    // - Relative paths are expanded wrt the matlabroot
+    // - The ~ expands to the user home directory
     "exclude_dirs":
     [
        "toolbox/local",
@@ -33,7 +38,9 @@
     // These patterns only apply to directories, not to filenames
     "exclude_patterns":
     [
-       "@", "+", "demo", "example", "+matlab", "+internal", "private"
+       "+matlab", "+internal", "private", 
+       "demo", "example",
+       "@", "+"
     ],
 
     // Matlab contains summaries of functions in Contents.m files
@@ -83,7 +90,7 @@
 
     // Path to snippet template for AutoMatlab documentation generation.
     // This snippet template can be modified if desired.
-    "mdoc_snippet_path": "AutoMatlab/Snippets/mdoc.sublime-snippet",
+    "mdoc_snippet_path": "mdoc.sublime-snippet",
 
     // Matlab's documentation specifies function/class signatures in upper
     // case, discarding case information in the function/class name. 

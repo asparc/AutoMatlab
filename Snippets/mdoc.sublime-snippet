@@ -7,14 +7,12 @@
 % 
 % Input:${MDOC_INARG_BLOCK_MARKER}
 %   - ${MDOC_INARG}: ${3:<description>}${MDOC_INARG_MARKER}
-%
 % Output:${MDOC_OUTARG_BLOCK_MARKER}
 %   - ${MDOC_OUTARG}: ${4:<description>}${MDOC_OUTARG_MARKER}
 %
-% Author(s): ${6:<authors>}${MDOC_AUTHOR_MARKER}
+% See also ${6:<list related>}${MDOC_SEE_ALSO_MARKER}
 %
-% See also ${7:<list related>}${MDOC_SEE_ALSO_MARKER}
-%
+% Author(s): ${7:<authors>}${MDOC_AUTHOR_MARKER}
 % Copyright ${8:<year>} ${9:<owner>}${MDOC_COPYRIGHT_MARKER}
 ]]></content>
 <scope>source.matlab</scope>

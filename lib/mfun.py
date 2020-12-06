@@ -1,11 +1,9 @@
 import re
 from os.path import split, splitext, isfile
 
-SIGNATURES_NAME = 'functionSignatures.json'
-CONTENTS_NAME = 'Contents.m'
+import AutoMatlab.lib.constants as constants
 
 class mfun:
-
     """Tools to extract function info from mfile description.
     """
 
@@ -22,8 +20,8 @@ class mfun:
 
         # check mfile validity
         if not isfile(self.path) or not self.ext == '.m' \
-                or self.file == SIGNATURES_NAME \
-                or self.file == CONTENTS_NAME:
+                or self.file == constants.SIGNATURES_NAME \
+                or self.file == constants.CONTENTS_NAME:
             return
 
         # read mfile line by line
@@ -34,6 +32,8 @@ class mfun:
                 try:
                     line = fh.readline()
                 except:
+                    return
+                if not line:
                     return
                     
             # check validity of first line
@@ -73,12 +73,12 @@ class mfun:
                     lline = line.lower()
                     if 'example' in lline:
                         last_def = True
-                    if 'copyright' in lline \
-                            or 'author(s):' in lline \
-                            or 'authors:' in lline \
-                            or 'revised:' in lline \
-                            or '#codegen' in lline \
+                    if '#codegen' in lline \
+                            or 'copyright' in lline \
                             or end_regex.search(line):
+                            # or 'author(s):' in lline \
+                            # or 'authors:' in lline \
+                            # or 'revised:' in lline \
                         # close documentation paragraph
                         if self.details[-3:] == '<p>':
                             self.details = self.details[:-3]

@@ -14,10 +14,9 @@
 % ${MDOC_ARG_BLOCK_MARKER}
 % ${MDOC_ARG}: ${5:<description>}${MDOC_ARG_MARKER}
 %
-% Author(s): ${6:<authors>}${MDOC_AUTHOR_MARKER}
+% See also ${6:<list related>}${MDOC_SEE_ALSO_MARKER}
 %
-% See also ${7:<list related>}${MDOC_SEE_ALSO_MARKER}
-%
+% Author(s): ${7:<authors>}${MDOC_AUTHOR_MARKER}
 % Copyright ${8:<year>} ${9:<owner>}${MDOC_COPYRIGHT_MARKER}
 ]]></content>
 <scope>source.matlab</scope>
