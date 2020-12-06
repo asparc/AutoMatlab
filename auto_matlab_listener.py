@@ -37,7 +37,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         # containters for completion data
         self.matlab_completions = collections.OrderedDict({})
         self.project_completions = collections.OrderedDict({})
-        self.loaded_project_completions = {}
+        self.loaded_project_completions = collections.OrderedDict({})
         # last modification time for completion data
         self.matlab_completions_mtime = 0
         self.loaded_project_completions_mtime = {}
@@ -59,14 +59,29 @@ class AutoMatlab(sublime_plugin.EventListener):
         if not view.match_selector(locations[0], 'source.matlab'):
             return []
 
-        # load matlab completions
-        self.load_matlab_completions(view.window())
+        # read settings
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
 
-        # load project completions
-        self.project_completions_lock.acquire()
-        self.project_completions = self.loaded_project_completions.get(
-            view.window().extract_variables().get('project_base_name'), {})
-        self.project_completions_lock.release()
+        # load matlab completions
+        if settings.get('matlab_completions', True):
+            self.load_matlab_completions(view.window())
+
+        if settings.get('project_completions', True):
+            # load project completions
+            self.project_completions_lock.acquire()
+            self.project_completions = self.loaded_project_completions.get(
+                view.window().extract_variables().get('project_base_name'), {})
+            self.project_completions_lock.release()
+        if not self.project_completions \
+                and settings.get('current_folder_completions', True):
+            # load current folder completions
+            self.project_completions_lock.acquire()
+            self.project_completions = self.loaded_project_completions.get(
+                view.window().extract_variables().get('file_path'), {})
+            self.project_completions_lock.release()
+
+        if settings.get('current_file_completions', True):
+            pass
 
         # ignore case
         prefix = prefix.lower()
@@ -91,7 +106,6 @@ class AutoMatlab(sublime_plugin.EventListener):
                                 EASTER[random.randrange(len(EASTER))]])
 
                 # load settings to see if documentation popup should be shown
-                settings = sublime.load_settings('AutoMatlab.sublime-settings')
                 documentation_popup = settings.get(
                     'documentation_popup', False)
                 if documentation_popup:
@@ -108,32 +122,6 @@ class AutoMatlab(sublime_plugin.EventListener):
                    for fun, data in self.matlab_completions.items()
                    if fun.startswith(prefix)]
         return out
-
-    def on_post_save(self, view):
-        """Update project completions upon saving of mfile
-        """
-        if not view.match_selector(0, 'source.matlab'):
-            return
-
-        # create project completions
-        self.load_project_completions_thread(view.window())
-
-    def on_activated(self, view):
-        """Create project completions upon first loading of mfile
-        """
-        if not view.match_selector(0, 'source.matlab'):
-            return
-
-        # check if project already exists
-        self.project_completions_lock.acquire()
-        loaded_projects = self.loaded_project_completions.keys()
-        self.project_completions_lock.release()
-        if view.window().extract_variables().get('project_base_name') \
-                in loaded_projects:
-            return
-
-        # create project completions
-        self.load_project_completions_thread(view.window())
 
     def on_text_command(self, view, command_name, args):
         """Redefine a number of sublime commands to obtain smoother
@@ -174,9 +162,51 @@ class AutoMatlab(sublime_plugin.EventListener):
                     and not view.is_auto_complete_visible()):
             view.run_command('hide_popup')
 
-    def load_project_completions_thread(self, window):
+    def on_post_save(self, view):
+        """Update project completions upon saving of mfile
+        """
+        if not view.match_selector(0, 'source.matlab'):
+            return
+
+        # udpate project completions
+        self.load_project_completions_thread(view.window())
+
+    def on_activated(self, view):
+        """Create project completions upon first loading of mfile
+        """
+        if not view.match_selector(0, 'source.matlab'):
+            return
+
+        # create project completions
+        self.load_project_completions_thread(view.window(), False)
+
+    def load_project_completions_thread(self, window, update=True):
         """Start worker thread to load project completions
         """
+        # read settings
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
+
+        # check project type: sublime project or matlab current folder
+        project = ""
+        if settings.get('project_completions', True):
+            project = window.extract_variables().get('project_base_name')
+            project_info = window.extract_variables()
+
+        if not project and settings.get('current_folder_completions', True):
+            project = window.extract_variables().get('file_path')
+            project_info = project
+
+        if not project:
+            return
+
+        if not update:
+            # don't update if project already exists
+            self.project_completions_lock.acquire()
+            loaded_projects = self.loaded_project_completions.keys()
+            self.project_completions_lock.release()
+            if project in loaded_projects:
+                return
+
         # check if thread is already running
         if self.load_project_thread.is_alive():
             return
@@ -184,50 +214,55 @@ class AutoMatlab(sublime_plugin.EventListener):
             # create and start worker thread
             self.load_project_thread = threading.Thread(
                 target=self.load_project_completions,
-                args=(window.extract_variables(),
-                      window.project_data(),
-                      window.folders()))
+                args=(project_info, window.project_data(), window.folders()))
             self.load_project_thread.start()
 
-    def load_project_completions(self, project_vars, project_data,
+    def load_project_completions(self, project_info, project_settings,
                                  project_folders):
         """Load project-specific completion data into completion dict
         """
         completions = {}
+        include_dirs = None
+        exclude_dirs = []
+        exclude_patterns = []
 
-        # get project
-        project = project_vars.get('project_base_name')
-        folder = project_vars.get('folder')
-        if not project or not folder:
-            return None
+        if type(project_info) == str:
+            # case: use working dir
+            project = project_info
+            include_dirs = [abspath('+', project_info), 
+                abspath(join('private', '+'), project_info)]
+        else:
+            # case: use project dir(s)
+            project = project_info.get('project_base_name')
+            folder = project_info.get('folder')
+            if not project or not folder:
+                return None
+
+            # get project dirs
+            settings = project_settings.get('auto_matlab')
+            if settings:
+                # read project dirs from settings
+                include_dirs = abspath(settings.get(
+                    'include_dirs', None), folder, project_info)
+                exclude_dirs = abspath(settings.get(
+                    'exclude_dirs', []), folder, project_info)
+                exclude_patterns = settings.get(
+                    'exclude_patterns', [])
+            if include_dirs == None:
+                # set default project dirs if unspecified
+                # (and also apply the exclude dirs)
+                include_dirs = [abspath('*', d)
+                                for d in project_folders
+                                if not any([excl for excl in exclude_dirs
+                                            if abspath(d).startswith(excl)])]
+            if not include_dirs:
+                return None
 
         # get last update time for project completions
         if not self.loaded_project_completions_mtime.get(project):
             self.loaded_project_completions_mtime[project] = 0
         completions_mtime = self.loaded_project_completions_mtime[project]
         last_mtime = completions_mtime
-
-        # get project dirs
-        include_dirs = None
-        exclude_dirs = []
-        exclude_patterns = []
-        project_settings = project_data.get('auto_matlab')
-        if project_settings:
-            # read project dirs from settings
-            include_dirs = abspath(project_settings.get('include_dirs', None),
-                                   folder, project_vars)
-            exclude_dirs = abspath(project_settings.get('exclude_dirs', []),
-                                   folder, project_vars)
-            exclude_patterns = project_settings.get('exclude_patterns', [])
-        if include_dirs == None:
-            # set default project dirs if unspecified
-            # (and also apply the exclude dirs)
-            include_dirs = [abspath('*', d)
-                            for d in project_folders
-                            if not any([excl for excl in exclude_dirs
-                                        if abspath(d).startswith(excl)])]
-        if not include_dirs:
-            return None
 
         # parse project include dirs
         for include in include_dirs:
@@ -291,11 +326,17 @@ class AutoMatlab(sublime_plugin.EventListener):
         sorted_completions = collections.OrderedDict(
             sorted(completions.items()))
 
-        # update project completions modified time and dict
+        popped_key = ""
+        # update project completions dict and modified time
         self.project_completions_lock.acquire()
         self.loaded_project_completions[project] = sorted_completions
+        # ensure loaded project completions size stays within sane limits
+        if len(self.loaded_project_completions) \
+                > constants.MAX_LOADED_PROJECT_COMPLETIONS:
+            popped_key = self.loaded_project_completions.popitem(False)[0]
         self.project_completions_lock.release()
         self.loaded_project_completions_mtime[project] = last_mtime
+        self.loaded_project_completions_mtime.pop(popped_key, None)
 
     def load_matlab_completions(self, window):
         """Load stored matlab completion data into completion dict

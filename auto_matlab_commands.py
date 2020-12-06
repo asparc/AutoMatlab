@@ -419,6 +419,8 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
 
     def run(self, edit):
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
+        project_settings = self.view.window().project_data().get(
+            'auto_matlab', {})
 
         # read first line
         region1 = self.view.line(0)
@@ -446,15 +448,20 @@ class DocumentAutoMatlabCommand(sublime_plugin.TextCommand):
         inargs = []
         if mo.group(5):
             inargs = [arg.strip() for arg in mo.group(5).split(',')]
-        if settings.get('mdoc_upper_case_signature', False):
+        upper = project_settings.get('mdoc_upper_case_signature')
+        if upper == None:
+            upper = settings.get('mdoc_upper_case_signature', False)
+        if upper:
             signature = signature.upper()
             fun = fun.upper()
             inargs = [arg.upper() for arg in inargs]
             outargs = [arg.upper() for arg in outargs]
 
         # read mdoc snippet
-        snip_path = settings.get('mdoc_snippet_path',
-                                 constants.DEFAULT_MDOC_SNIPPET_PATH)
+        snip_path = project_settings.get('mdoc_snippet_path')
+        if not snip_path:
+            snip_path = settings.get('mdoc_snippet_path',
+                                     constants.DEFAULT_MDOC_SNIPPET_PATH)
         if isfile(abspath(snip_path)):
             snip_path = abspath(snip_path)
         elif sublime.find_resources(snip_path):

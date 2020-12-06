@@ -35,3 +35,6 @@ DEFAULT_MATLABROOT = ('C:\\Matlab', 'C:\\Program Files\\Matlab')
 DEFAULT_MATLAB_PATHDEF_PATH = 'toolbox/local/pathdef.m'
 SIGNATURES_NAME = 'functionSignatures.json'
 CONTENTS_NAME = 'Contents.m'
+
+# other
+MAX_LOADED_PROJECT_COMPLETIONS = 7
