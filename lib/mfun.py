@@ -4,7 +4,7 @@ from os.path import split, splitext, isfile
 import AutoMatlab.lib.constants as constants
 
 class mfun:
-    """Tools to extract function info from mfile description.
+    """Class to extract function documentation from mfile.
     """
 
     def __init__(self, path):
@@ -80,25 +80,24 @@ class mfun:
                             # or 'authors:' in lline \
                             # or 'revised:' in lline \
                         # close documentation paragraph
-                        if self.details[-3:] == '<p>':
-                            self.details = self.details[:-3]
-                        else:
-                            self.details += '</p>'
+                        self.details += '</p>'
+                        while self.details[-7:] == '<p></p>':
+                            self.details = self.details[:-7]
                         return
 
                     # append to function documentation
                     mo = doc_regex.search(line)
                     if mo:
-                        details = mo.group(1)
+                        new_details = mo.group(1)
                         # replace invalid html characters
-                        details = details.replace('&', '&amp;')
-                        details = details.replace('<', '&lt;')
-                        details = details.replace('>', '&gt;')
+                        new_details = new_details.replace('&', '&amp;')
+                        new_details = new_details.replace('<', '&lt;')
+                        new_details = new_details.replace('>', '&gt;')
                         # append to documentation paragraph
                         if not (self.details[-3:] == '<p>'
                                 or self.details[-4:] == '<br>'):
                             self.details += '<br>'
-                        self.details += details
+                        self.details += new_details
                     else:
                         # start new documentation paragraph
                         self.details += '</p><p>'
@@ -118,7 +117,7 @@ class mfun:
                             for param in params:
                                 if i > 1:
                                     snip += ', '
-                                snip += '${{{}:{}}}'.format(i, param)
+                                snip += '${{{}:{}}}'.format(i, param.strip())
                                 i += 1
                             snip += ')$0'
                             self.snips.append(snip)

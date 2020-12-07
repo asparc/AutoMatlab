@@ -92,10 +92,10 @@
     //   (except for the exclude_pattern "+", if present)
     "include_dirs":
     [
-       // "toolbox/shared/controllib/engine/@DynamicSystem",
-       // "toolbox/shared/controllib/engine/@StaticModel",
-       // "toolbox/control/ctrldesign/@ss",
-       // "toolbox/matlab/matfun",
+       "toolbox/shared/controllib/engine/@DynamicSystem",
+       "toolbox/shared/controllib/engine/@StaticModel",
+       "toolbox/control/ctrldesign/@ss",
+       "toolbox/matlab/matfun",
        // "~/Documents/MATLAB/*",
        // "~/Documents/MATLAB/lib/+",
     ],

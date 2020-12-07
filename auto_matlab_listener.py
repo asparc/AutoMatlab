@@ -37,15 +37,22 @@ class AutoMatlab(sublime_plugin.EventListener):
         # containters for completion data
         self.matlab_completions = collections.OrderedDict({})
         self.project_completions = collections.OrderedDict({})
+        self.file_completions = collections.OrderedDict({})
         self.loaded_project_completions = collections.OrderedDict({})
         # last modification time for completion data
         self.matlab_completions_mtime = 0
         self.loaded_project_completions_mtime = {}
         # threading
+        self.load_file_thread = threading.Thread()
+        self.file_completions_lock = threading.Lock()
         self.load_project_thread = threading.Thread()
         self.project_completions_lock = threading.Lock()
         # flags
         self.warned = False
+        # other
+        self.locfun_regex = \
+            re.compile(r'^\s*function\s+(?:(?:\w+\s*=\s*|'
+                       r'\[[\w\s\.,]+\]\s*=\s*)?(\w+)\([^\)]*\))')
 
     def on_query_completions(self, view, prefix, locations):
         """Construct AutoMatlab completion list.
@@ -80,42 +87,61 @@ class AutoMatlab(sublime_plugin.EventListener):
                 view.window().extract_variables().get('file_path'), {})
             self.project_completions_lock.release()
 
+        file_completions = {}
         if settings.get('current_file_completions', True):
-            pass
+            self.file_completions_lock.acquire()
+            file_completions = self.file_completions
+            self.file_completions_lock.release()
 
         # ignore case
         prefix = prefix.lower()
 
         # output container
         out = []
+        details = ''
 
         # check for exact match
-        exact = self.project_completions.get(prefix)
-        if not exact:
-            exact = self.matlab_completions.get(prefix)
-        if exact:
+        if prefix in file_completions.keys():
+            [out, details] = self.extract_local_function_documentation(
+                view.window().extract_variables().get('file'), prefix)
+        elif prefix in self.project_completions.keys():
             # read mfun from mfile to extract all data
-            mfun_data = mfun(exact[2])
+            mfun_data = mfun(self.project_completions[prefix][2])
             if mfun_data.valid:
-                mfun_data.details = self.create_hrefs(mfun_data.details)
+                details = self.create_hrefs(mfun_data.details)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
-                if len(out) == 1:
-                    out.append([mfun_data.fun + '\t Easter Egg',
-                                EASTER[random.randrange(len(EASTER))]])
+        elif prefix in self.matlab_completions.keys():
+            # read mfun from mfile to extract all data
+            mfun_data = mfun(self.matlab_completions[prefix][2])
+            if mfun_data.valid:
+                details = self.create_hrefs(mfun_data.details)
+                for i in range(len(mfun_data.defs)):
+                    out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
+                                mfun_data.snips[i]])
 
-                # load settings to see if documentation popup should be shown
-                documentation_popup = settings.get(
-                    'documentation_popup', False)
-                if documentation_popup:
-                    view.show_popup(mfun_data.details,
-                                    sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                                    max_width=750, max_height=400,
-                                    on_navigate=self.update_details_popup)
-                    self.popup_view = view
+        if out:
+            # postprocess exact match output
+            if len(out) == 1:
+                out.append([out[0][0].split('\t')[0] + '\t Easter Egg',
+                            EASTER[random.randrange(len(EASTER))]])
+
+            # load settings to see if documentation popup should be shown
+            documentation_popup = settings.get(
+                'documentation_popup', False)
+            if documentation_popup:
+                view.show_popup(details,
+                                sublime.COOPERATE_WITH_AUTO_COMPLETE,
+                                max_width=750, max_height=400,
+                                on_navigate=self.update_details_popup)
+                self.popup_view = view
         else:
+            # check for partial prefix match
             out = [[data[0] + '\t' + data[1], data[0]]
+                   for fun, data in file_completions.items()
+                   if fun.startswith(prefix)] \
+                + [[data[0] + '\t' + data[1], data[0]]
                    for fun, data in self.project_completions.items()
                    if fun.startswith(prefix)] \
                 + [[data[0] + '\t' + data[1], data[0]]
@@ -168,7 +194,10 @@ class AutoMatlab(sublime_plugin.EventListener):
         if not view.match_selector(0, 'source.matlab'):
             return
 
-        # udpate project completions
+        # update file completions
+        self.load_file_completions_thread(view.window())
+
+        # update project completions
         self.load_project_completions_thread(view.window())
 
     def on_activated(self, view):
@@ -177,8 +206,74 @@ class AutoMatlab(sublime_plugin.EventListener):
         if not view.match_selector(0, 'source.matlab'):
             return
 
+        # create file completions
+        self.load_file_completions_thread(view.window())
+
         # create project completions
         self.load_project_completions_thread(view.window(), False)
+
+    def load_file_completions_thread(self, window):
+        """Start worker thread to load current file completions
+        """
+        # read settings
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
+        if not settings.get('current_file_completions', True):
+            return
+
+        # check if thread is already running
+        if self.load_file_thread.is_alive():
+            return
+        else:
+            # create and start worker thread
+            self.load_file_thread = threading.Thread(
+                target=self.load_file_completions,
+                args=(window.extract_variables().get('file'),))
+            self.load_file_thread.start()
+
+    def load_file_completions(self, file):
+        """Load completion data from the local functions in the current file
+        """
+        if not file or not isfile(file):
+            self.file_completions_lock.acquire()
+            self.file_completions = collections.OrderedDict({})
+            self.file_completions_lock.release()
+            return
+
+        completions = {}
+
+        with open(file, encoding='cp1252') as fh:
+            # find first non-empty line
+            line = ''
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    self.file_completions_lock.acquire()
+                    self.file_completions = collections.OrderedDict({})
+                    self.file_completions_lock.release()
+                    return
+                if not line:
+                    self.file_completions_lock.acquire()
+                    self.file_completions = collections.OrderedDict({})
+                    self.file_completions_lock.release()
+                    return
+
+            # start reading after first non-empty line
+            for line in fh:
+                # find function definitions
+                mo = self.locfun_regex.search(line)
+                if mo:
+                    fun = mo.group(1)
+                    completions[fun.lower()] = [fun, 'Local function']
+
+        # sort the completions
+        sorted_completions = collections.OrderedDict(
+            sorted(completions.items()))
+
+        # update file completions
+        self.file_completions_lock.acquire()
+        self.file_completions = sorted_completions
+        self.file_completions_lock.release()
 
     def load_project_completions_thread(self, window, update=True):
         """Start worker thread to load project completions
@@ -187,7 +282,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
 
         # check project type: sublime project or matlab current folder
-        project = ""
+        project = ''
         if settings.get('project_completions', True):
             project = window.extract_variables().get('project_base_name')
             project_info = window.extract_variables()
@@ -229,8 +324,8 @@ class AutoMatlab(sublime_plugin.EventListener):
         if type(project_info) == str:
             # case: use working dir
             project = project_info
-            include_dirs = [abspath('+', project_info), 
-                abspath(join('private', '+'), project_info)]
+            include_dirs = [abspath('+', project_info),
+                            abspath(join('private', '+'), project_info)]
         else:
             # case: use project dir(s)
             project = project_info.get('project_base_name')
@@ -326,7 +421,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         sorted_completions = collections.OrderedDict(
             sorted(completions.items()))
 
-        popped_key = ""
+        popped_key = ''
         # update project completions dict and modified time
         self.project_completions_lock.acquire()
         self.loaded_project_completions[project] = sorted_completions
@@ -403,3 +498,80 @@ class AutoMatlab(sublime_plugin.EventListener):
         if mfun_data.valid:
             mfun_data.details = self.create_hrefs(mfun_data.details)
             self.popup_view.update_popup(mfun_data.details)
+
+    def extract_local_function_documentation(self, file, fun_lower):
+        """Extract documentation for local function
+        """
+        if not isfile(file):
+            return [None, None]
+
+        doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
+        end_regex = re.compile(r'^\s*[^%\s]')
+        def_regex = re.compile(
+            r'^\s*function(.*(' + fun_lower + r')\(([^\)]*)\))', re.I)
+
+        details = '<p><b>Local function</b></p><p>'
+        out = []
+        with open(file, encoding='cp1252') as fh:
+            # find first non-empty line
+            line = ''
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    return [None, None]
+                if not line:
+                    return [None, None]
+
+            # start reading after first non-empty line
+            found = False
+            for line in fh:
+                # find function definition
+                mo = def_regex.search(line)
+                if mo:
+                    found = True
+                    # read defintion
+                    definition = mo.group(1).strip()
+                    fun = mo.group(2)
+                    params = mo.group(3).split(',')
+                    # create snippet
+                    snip = fun + '('
+                    i = 1
+                    for param in params:
+                        if i > 1:
+                            snip += ', '
+                        snip += '${{{}:{}}}'.format(i, param.strip())
+                        i += 1
+                    snip += ')$0'
+                    # compose output
+                    out = [fun + '\t' + definition, snip]
+                    continue
+
+                if found:
+                    # read function documentation until end regex
+                    if end_regex.search(line):
+                        break
+
+                    # append to function documentation
+                    mo = doc_regex.search(line)
+                    if mo:
+                        new_details = mo.group(1)
+                        # replace invalid html characters
+                        new_details = new_details.replace('&', '&amp;')
+                        new_details = new_details.replace('<', '&lt;')
+                        new_details = new_details.replace('>', '&gt;')
+                        # append to documentation paragraph
+                        if not (details[-3:] == '<p>'
+                                or details[-4:] == '<br>'):
+                            details += '<br>'
+                        details += new_details
+                    else:
+                        # start new documentation paragraph
+                        details += '</p><p>'
+
+        # close documentation paragraph
+        details += '</p>'
+        while details[-7:] == '<p></p>':
+            details = details[:-7]
+
+        return [[out], details]
