@@ -49,6 +49,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         self.project_completions_lock = threading.Lock()
         # flags
         self.warned = False
+        self.reset_mtimes = True
         # other
         self.locfun_regex = \
             re.compile(r'^\s*function\s+(?:(?:\w+\s*=\s*|'
@@ -105,8 +106,15 @@ class AutoMatlab(sublime_plugin.EventListener):
             [out, details] = self.extract_local_function_documentation(
                 view.window().extract_variables().get('file'), prefix)
         elif prefix in self.project_completions.keys():
+            # read project documentation format from settings
+            project_settings = view.window().project_data().get(
+                'auto_matlab', {})
+            free_format = project_settings.get('free_documentation_format')
+            if free_format == None \
+                    or not settings.get('project_completions', True):
+                free_format = settings.get('free_documentation_format', True)
             # read mfun from mfile to extract all data
-            mfun_data = mfun(self.project_completions[prefix][2])
+            mfun_data = mfun(self.project_completions[prefix][2], free_format)
             if mfun_data.valid:
                 details = self.create_hrefs(mfun_data.details)
                 for i in range(len(mfun_data.defs)):
@@ -191,6 +199,13 @@ class AutoMatlab(sublime_plugin.EventListener):
     def on_post_save(self, view):
         """Update project completions upon saving of mfile
         """
+        # check if it was a sublime project/settings file that was saved
+        file_name = view.window().extract_variables().get('file_name')
+        if file_name:
+            ext = splitext(file_name)[1]
+            if ext == '.sublime-project' or ext == '.sublime-settings':
+                self.reset_mtimes = True
+
         if not view.match_selector(0, 'source.matlab'):
             return
 
@@ -210,7 +225,7 @@ class AutoMatlab(sublime_plugin.EventListener):
         self.load_file_completions_thread(view.window())
 
         # create project completions
-        self.load_project_completions_thread(view.window(), False)
+        self.load_project_completions_thread(view.window(), self.reset_mtimes)
 
     def load_file_completions_thread(self, window):
         """Start worker thread to load current file completions
@@ -309,17 +324,21 @@ class AutoMatlab(sublime_plugin.EventListener):
             # create and start worker thread
             self.load_project_thread = threading.Thread(
                 target=self.load_project_completions,
-                args=(project_info, window.project_data(), window.folders()))
+                args=(project_info, window.project_data(),
+                      window.folders(), self.reset_mtimes))
             self.load_project_thread.start()
+            self.reset_mtimes = False
 
     def load_project_completions(self, project_info, project_settings,
-                                 project_folders):
+                                 project_folders, reset_mtimes=False):
         """Load project-specific completion data into completion dict
         """
         completions = {}
         include_dirs = None
         exclude_dirs = []
         exclude_patterns = []
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
+        free_format = settings.get('free_documentation_format', True)
 
         if type(project_info) == str:
             # case: use working dir
@@ -334,14 +353,14 @@ class AutoMatlab(sublime_plugin.EventListener):
                 return None
 
             # get project dirs
-            settings = project_settings.get('auto_matlab')
-            if settings:
-                # read project dirs from settings
-                include_dirs = abspath(settings.get(
+            project_settings_auto_matlab = project_settings.get('auto_matlab')
+            if project_settings_auto_matlab:
+                # read project dirs from project_settings_auto_matlab
+                include_dirs = abspath(project_settings_auto_matlab.get(
                     'include_dirs', None), folder, project_info)
-                exclude_dirs = abspath(settings.get(
+                exclude_dirs = abspath(project_settings_auto_matlab.get(
                     'exclude_dirs', []), folder, project_info)
-                exclude_patterns = settings.get(
+                exclude_patterns = project_settings_auto_matlab.get(
                     'exclude_patterns', [])
             if include_dirs == None:
                 # set default project dirs if unspecified
@@ -352,6 +371,18 @@ class AutoMatlab(sublime_plugin.EventListener):
                                             if abspath(d).startswith(excl)])]
             if not include_dirs:
                 return None
+
+            # overwrite free_format on project level
+            if 'free_documentation_format' \
+                    in project_settings_auto_matlab.keys() \
+                    and settings.get('project_completions', True):
+                free_format = project_settings_auto_matlab.get(
+                    'free_documentation_format', True)
+
+        # reset modified time for completions, if necessary
+        if reset_mtimes:
+            for key in self.loaded_project_completions_mtime.keys():
+                self.loaded_project_completions_mtime[key] = 0
 
         # get last update time for project completions
         if not self.loaded_project_completions_mtime.get(project):
@@ -381,7 +412,7 @@ class AutoMatlab(sublime_plugin.EventListener):
                         if file_mtime > last_mtime:
                             last_mtime = file_mtime
                         # read mfun
-                        mfun_data = mfun(join(root, f))
+                        mfun_data = mfun(join(root, f), free_format)
                         if not mfun_data.valid:
                             continue
 
@@ -490,8 +521,19 @@ class AutoMatlab(sublime_plugin.EventListener):
         """
         # get mfun data from project or matlab completions
         if fun in self.project_completions.keys():
-            mfun_data = mfun(self.project_completions.get(fun)[2])
+            # read project documentation format from settings
+            settings = sublime.load_settings('AutoMatlab.sublime-settings')
+            project_settings = sublime.active_window().project_data().get(
+                'auto_matlab', {})
+            free_format = project_settings.get('free_documentation_format')
+            if free_format == None \
+                    or not settings.get('project_completions', True):
+                free_format = settings.get('free_documentation_format', True)
+
+            # read mfun
+            mfun_data = mfun(self.project_completions.get(fun)[2], free_format)
         else:
+            # read mfun
             mfun_data = mfun(self.matlab_completions.get(fun)[2])
 
         # update popup contents
@@ -533,16 +575,8 @@ class AutoMatlab(sublime_plugin.EventListener):
                     # read defintion
                     definition = mo.group(1).strip()
                     fun = mo.group(2)
-                    params = mo.group(3).split(',')
-                    # create snippet
-                    snip = fun + '('
-                    i = 1
-                    for param in params:
-                        if i > 1:
-                            snip += ', '
-                        snip += '${{{}:{}}}'.format(i, param.strip())
-                        i += 1
-                    snip += ')$0'
+                    # create snippet from defintiion
+                    snip = mfun.definition_to_snippet(fun, mo.group(3))
                     # compose output
                     out = [fun + '\t' + definition, snip]
                     continue
@@ -555,16 +589,12 @@ class AutoMatlab(sublime_plugin.EventListener):
                     # append to function documentation
                     mo = doc_regex.search(line)
                     if mo:
-                        new_details = mo.group(1)
-                        # replace invalid html characters
-                        new_details = new_details.replace('&', '&amp;')
-                        new_details = new_details.replace('<', '&lt;')
-                        new_details = new_details.replace('>', '&gt;')
-                        # append to documentation paragraph
+                        # newline
                         if not (details[-3:] == '<p>'
                                 or details[-4:] == '<br>'):
                             details += '<br>'
-                        details += new_details
+                        # append to documentation paragraph
+                        details += mfun.make_html_compliant(mo.group(1))
                     else:
                         # start new documentation paragraph
                         details += '</p><p>'

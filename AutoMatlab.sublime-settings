@@ -9,7 +9,7 @@
     // - C:/Program Files/MATLAB/RXXXXX'
     "matlabroot": "default",
 
-    // Path to the pathdef.m file (relative to matlabroot)
+    // Path to the pathdef.m file (relative to matlabroot).
     "matlab_pathdef_path": "toolbox/local/pathdef.m",
 
     // ********************************************************* //
@@ -30,17 +30,27 @@
     // ************** AutoMatlab autocompletion **************** //
     // ********************************************************* //
 
-    // completions based on local functions in current file
+    // Show completions based on local functions in current file.
     "current_file_completions": true,
 
-    // completions based on functions in current folder
+    // Show completions based on functions in current folder.
     "current_folder_completions": true,
 
-    // completions based on functions in sublime project
+    // Show completions based on functions in sublime project.
     "project_completions": true,
 
-    // completions based on functions in Matlab installation
+    // Show completions based on built-in functions in the Matlab 
+    // installation specified by `matlabroot`.
     "matlab_completions": true,
+
+    // Specify the format used for documenting functions in the
+    // current folder or project. If set to true, AutoMatlab accepts
+    // any documentation format. If set to false, AutoMatlab expects
+    // the same documentation format as used in the built-in Matlab
+    // functions. In this latter case, AutoMatlab can generate richer
+    // completions, but will fail to generate completions for functions
+    // that do not respect the proper documentation format.
+    "free_documentation_format": false,
 
     // Show a popup with detailed function documentation upon an exact 
     // match with the autocompletion trigger of a function
@@ -55,7 +65,7 @@
 
     // With the option `ctrl_completion_navigation` set to `true`,
     // it is convenient to use `ctrl+right` to commit
-    // the current completion suggestion
+    // the current completion suggestion.
     "ctrl_right_commit": true,
 
     // ********************************************************* //
@@ -66,7 +76,7 @@
     // AutoMatlab can look for the Contents.m files and:
     // `ignore`: don't use Contents.m files for Matlab completions
     // `read`: read Contents.m files for Matlab completions
-    // `dir`: search in dir of Contents.m files for Matlab completions
+    // `dir`: search in dir of Contents.m files for Matlab completions.
     "use_contents_files": "dir",
 
     // Matlab stores its autocompletion metadata in functionSignatures.json files
@@ -100,7 +110,7 @@
        // "~/Documents/MATLAB/lib/+",
     ],
 
-    // Specific dirs to exclude from Matlab completion generation
+    // Specific dirs to exclude from Matlab completion generation.
     // - Relative paths are expanded wrt the matlabroot
     // - The ~ expands to the user home directory
     "exclude_dirs":
@@ -111,8 +121,8 @@
        "toolbox/target",
     ],
 
-    // Specific patterns to exclude from Matlab completion generation
-    // These patterns only apply to directories, not to filenames
+    // Specific patterns to exclude from Matlab completion generation.
+    // These patterns only apply to directories, not to filenames.
     "exclude_patterns":
     [
        "+matlab", "+internal", "private", 
