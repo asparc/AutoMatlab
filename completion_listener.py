@@ -19,18 +19,9 @@ def plugin_loaded():
     from AutoMatlab.lib.mfun import mfun
 
 
-# some Matlab easter eggs
-EASTER = ['spy', 'life', 'why', 'toilet', 'image', 'lala', 'penny', 'shower',
-          'viper', 'fuc*', 'tetris_2', 'rlc_gui', 'sf_tictacflow', 'eml_fire',
-          'eml_asteroids', 'xpsound', 'xpquad', 'wrldtrv', 'vibes', 'truss',
-          'makevase', 'lorenz', 'knot', 'imageext', 'eigshow', 'earthmap',
-          'census', 'cruller', 'imagesc(hot)', 'logo', 'surf(membrane)',
-          'imagesAndVideo', 'step', 'fifteen', 'xpbombs', 'penny']
+class CompletionListener(sublime_plugin.EventListener):
 
-
-class AutoMatlab(sublime_plugin.EventListener):
-
-    """AutoMatlab event lister
+    """AutoMatlab event lister for completions
     """
 
     def __init__(self):
@@ -140,7 +131,8 @@ class AutoMatlab(sublime_plugin.EventListener):
             # postprocess exact match output
             if len(out) == 1:
                 out.append([out[0][0].split('\t')[0] + '\t Easter Egg',
-                            EASTER[random.randrange(len(EASTER))]])
+                            constants.EASTER[random.randrange(
+                                len(constants.EASTER))]])
 
             # load settings to see if documentation popup should be shown
             documentation_popup = settings.get(

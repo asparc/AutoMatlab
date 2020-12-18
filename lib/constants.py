@@ -38,3 +38,11 @@ CONTENTS_NAME = 'Contents.m'
 
 # other
 MAX_LOADED_PROJECT_COMPLETIONS = 7
+
+EASTER = ['spy', 'life', 'why', 'image', 'penny', 'shower',
+          'xpsound', 'xpquad', 'xpbombs', 'wrldtrv', 'vibes', 'truss',
+          'makevase', 'lorenz', 'knot', 'imageext', 'earthmap',
+          'cruller', 'logo', 'surf(membrane)',
+          'imagesAndVideo', 'fifteen']
+# toolbox easter eggs: 'rlc_gui', 'sf_tictacflow', 'eml_fire', 'eml_asteroids'
+# failing easter eggs: 'toilet', 'lala', 'shower', 'viper', 'eigshow', 'census'

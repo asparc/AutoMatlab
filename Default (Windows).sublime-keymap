@@ -32,7 +32,7 @@
     },
     {
         "keys": ["alt+q"], 
-        "command": "document_auto_matlab",
+        "command": "generate_auto_matlab_documentation",
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },
