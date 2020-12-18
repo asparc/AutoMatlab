@@ -50,7 +50,7 @@
     // functions. In this latter case, AutoMatlab can generate richer
     // completions, but will fail to generate completions for functions
     // that do not respect the proper documentation format.
-    "free_documentation_format": false,
+    "free_documentation_format": true,
 
     // Show a popup with detailed function documentation upon an exact 
     // match with the autocompletion trigger of a function

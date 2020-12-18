@@ -84,8 +84,12 @@ class AutoMatlab(sublime_plugin.EventListener):
                 and settings.get('current_folder_completions', True):
             # load current folder completions
             self.project_completions_lock.acquire()
-            self.project_completions = self.loaded_project_completions.get(
-                view.window().extract_variables().get('file_path'), {})
+            if len(view.window().folders()) == 1:
+                self.project_completions = self.loaded_project_completions.get(
+                    view.window().folders()[0], {})
+            else:
+                self.project_completions = self.loaded_project_completions.get(
+                    view.window().extract_variables().get('file_path'), {})
             self.project_completions_lock.release()
 
         file_completions = {}
@@ -107,8 +111,11 @@ class AutoMatlab(sublime_plugin.EventListener):
                 view.window().extract_variables().get('file'), prefix)
         elif prefix in self.project_completions.keys():
             # read project documentation format from settings
-            project_settings = view.window().project_data().get(
-                'auto_matlab', {})
+            if view.window().project_data():
+                project_settings = view.window().project_data().get(
+                    'auto_matlab', {})
+            else:
+                project_settings = {}
             free_format = project_settings.get('free_documentation_format')
             if free_format == None \
                     or not settings.get('project_completions', True):
@@ -303,10 +310,13 @@ class AutoMatlab(sublime_plugin.EventListener):
             project_info = window.extract_variables()
 
         if not project and settings.get('current_folder_completions', True):
-            project = window.extract_variables().get('file_path')
+            if len(window.folders()) == 1:
+                project = window.folders()[0]
+            else:
+                project = window.extract_variables().get('file_path')
             project_info = project
 
-        if not project:
+        if not project or not project_info:
             return
 
         if not update:
@@ -343,8 +353,13 @@ class AutoMatlab(sublime_plugin.EventListener):
         if type(project_info) == str:
             # case: use working dir
             project = project_info
-            include_dirs = [abspath('+', project_info),
-                            abspath(join('private', '+'), project_info)]
+            if len(project_folders) == 1:
+                # case: sublime working dir: include all subdirs ('*')
+                include_dirs = [abspath('*', project_folders[0])]
+            else:
+                # case: matlab working dir: include all package dirs ('+')
+                include_dirs = [abspath('+', project_info),
+                                abspath(join('private', '+'), project_info)]
         else:
             # case: use project dir(s)
             project = project_info.get('project_base_name')
@@ -353,7 +368,8 @@ class AutoMatlab(sublime_plugin.EventListener):
                 return None
 
             # get project dirs
-            project_settings_auto_matlab = project_settings.get('auto_matlab')
+            project_settings_auto_matlab = project_settings.get(
+                'auto_matlab', {})
             if project_settings_auto_matlab:
                 # read project dirs from project_settings_auto_matlab
                 include_dirs = abspath(project_settings_auto_matlab.get(
@@ -523,8 +539,12 @@ class AutoMatlab(sublime_plugin.EventListener):
         if fun in self.project_completions.keys():
             # read project documentation format from settings
             settings = sublime.load_settings('AutoMatlab.sublime-settings')
-            project_settings = sublime.active_window().project_data().get(
-                'auto_matlab', {})
+            if sublime.active_window().project_data():
+                project_settings = sublime.active_window().project_data().get(
+                    'auto_matlab', {})
+            else:
+                project_settings = {}
+
             free_format = project_settings.get('free_documentation_format')
             if free_format == None \
                     or not settings.get('project_completions', True):

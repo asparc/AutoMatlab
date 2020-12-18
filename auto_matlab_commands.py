@@ -200,6 +200,7 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
         self.lock.release()
         if finished:
             # run threads to generate matlab completions
+            self.error = False
             threading.Thread(target=self.show_status).start()
             threading.Thread(target=self.generate_completions).start()
         else:
@@ -222,13 +223,13 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
             # check if matlab completion generation finished
             self.lock.acquire()
             if self.finished:
-                n_completions = self.n_completions
                 busy = False
+                if not self.error:
+                    msg = '[INFO] AutoMatlab - Found {}'.format(
+                        self.n_completions) + ' Matlab function completions'
+                    print(msg)
+                    self.window.status_message(msg)
             self.lock.release()
-        msg = '[INFO] AutoMatlab - Found {}'.format(n_completions) \
-            + ' Matlab function completions'
-        print(msg)
-        self.window.status_message(msg)
 
     def generate_completions(self):
         """Generate matlab completions
@@ -267,12 +268,21 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
             assert use_matlab_path in ['dir', 'read', 'ignore'], \
                 "[ERROR] AutoMatlab - Invalid value for 'use_signatures_files'"
         except Exception as e:
+            self.lock.acquire()
+            self.error = True
+            self.finished = True
+            self.lock.release()
             self.window.status_message(str(e))
             raise e
+            return
 
         # check if matlab installation can be found
         matlabroot = find_matlabroot(matlab_search_dir)
         if not matlabroot:
+            self.lock.acquire()
+            self.error = True
+            self.finished = True
+            self.lock.release()
             msg = '[ERROR] AutoMatlab - Matlab installation could not be' \
                 'found at specified location'
             self.window.status_message(msg)
@@ -288,6 +298,10 @@ class GenerateAutoMatlabCommand(sublime_plugin.WindowCommand):
             # get dirs in matlab path
             matlab_path_dirs = process_pathdef(matlab_pathdef_path, matlabroot)
             if not matlab_path_dirs:
+                self.lock.acquire()
+                self.error = True
+                self.finished = True
+                self.lock.release()
                 msg = '[ERROR] AutoMatlab - Specified pathdef.m is invalid'
                 self.window.status_message(msg)
                 raise Exception(msg)
