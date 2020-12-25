@@ -50,27 +50,28 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         inargs = []
         if mo.group(5):
             inargs = [arg.strip() for arg in mo.group(5).split(',')]
-        upper = project_settings.get('mdoc_upper_case_signature')
+        upper = project_settings.get('documentation_upper_case_signature')
         if upper == None:
-            upper = settings.get('mdoc_upper_case_signature', False)
+            upper = settings.get('documentation_upper_case_signature', False)
         if upper:
             signature = signature.upper()
             fun = fun.upper()
             inargs = [arg.upper() for arg in inargs]
             outargs = [arg.upper() for arg in outargs]
 
-        # read mdoc snippet
-        snip_path = project_settings.get('mdoc_snippet_path')
+        # read matlab documentation snippet
+        snip_path = project_settings.get('documentation_snippet_path')
         if not snip_path:
-            snip_path = settings.get('mdoc_snippet_path',
-                                     constants.DEFAULT_MDOC_SNIPPET_PATH)
+            snip_path = settings.get(
+                'documentation_snippet_path',
+                constants.DEFAULT_DOCUMENTATION_SNIPPET_PATH)
         if isfile(abspath(snip_path)):
             snip_path = abspath(snip_path)
         elif sublime.find_resources(snip_path):
             snip_path = abspath(sublime.find_resources(snip_path)[-1],
                                 join(sublime.packages_path(), ".."))
         else:
-            msg = '[ERROR] AutoMatlab - Invalid mdoc snippet path.'
+            msg = '[ERROR] AutoMatlab - Invalid documentation snippet path.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
@@ -78,22 +79,22 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         with open(snip_path) as fh:
             snip_all = fh.read()
 
-        # extract mdoc snippet content
+        # extract documentation snippet content
         pattern = r'<!\[CDATA\[([\s\S]*)\]]>'
         mo = re.search(pattern, snip_all)
         if not mo:
-            msg = '[ERROR] AutoMatlab - Mdoc snippet could not ' \
+            msg = '[ERROR] AutoMatlab - Documentation snippet could not ' \
                 'be found.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
         snip = mo.group(1).strip()
 
-        # some validity check on the mdoc snippet
+        # some validity checks on the documentation snippet
         mo = re.findall(r'^[^\n]*\${MDOC_NAME_MARKER}', snip)
         if not mo:
             msg = '[ERROR] AutoMatlab - ${MDOC_NAME_MARKER} is compulsory in ' \
-                'first line of mdoc snippet.'
+                'first line of documentation snippet.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
@@ -101,7 +102,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         mo = re.findall(r'^\W*\${MDOC_NAME}', snip)
         if not mo:
             msg = '[ERROR] AutoMatlab - ${MDOC_NAME} is compulsory as ' \
-                'first word of mdoc snippet.'
+                'first word of documentation snippet.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
@@ -109,7 +110,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         mo = re.search(r'^[^\n]*(\${MDOC_\w*_MARKER}).+', snip, re.M)
         if mo:
             msg = '[ERROR] AutoMatlab - ' + mo.group(1) + ' should be at end ' \
-                'of line in mdoc snippet.'
+                'of line in documentation snippet.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
@@ -167,16 +168,16 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
                                mdoc_arg_marker, mdoc_arg):
         """Compose function argument part of snippet, line by line
         """
-        # check if argument block is specified in mdoc snippet
+        # check if argument block is specified in documentation snippet
         mo = re.search(r'^.*\${' + mdoc_block_marker + '}', snip, re.M)
         if mo:
             if args:
                 mo = re.search(
                     r'^.*\${' + mdoc_arg_marker + '}.*$', snip, re.M)
                 if not (mo and re.search(r'\${' + mdoc_arg + '}', mo.group())):
-                    msg = '[ERROR] AutoMatlab - Mdoc argument (marker) field' \
+                    msg = '[ERROR] AutoMatlab - Argument (marker) field' \
                         'is missing for ${' + mdoc_block_marker + '}' \
-                        ' of mdoc snippet.'
+                        ' of documentation snippet.'
                     self.view.window().status_message(msg)
                     raise Exception(msg)
                     return
