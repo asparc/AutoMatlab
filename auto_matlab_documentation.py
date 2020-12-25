@@ -32,7 +32,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
             r'\s*(\w+)\((.*)\))'
         mo = re.search(pattern, line1)
         if not mo:
-            msg = '[WARNING] AutoMatlab - Could not find Matlab' \
+            msg = '[WARNING] AutoMatlab - Could not find Matlab ' \
                 'function signature.'
             print(msg)
             self.view.window().status_message(msg)
@@ -59,16 +59,19 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
             outargs = [arg.upper() for arg in outargs]
 
         # read matlab documentation snippet
-        snip_path = project_settings.get('documentation_snippet_path')
+        snip_path = project_settings.get('documentation_snippet')
         if not snip_path:
-            snip_path = settings.get('documentation_snippet_path', '')
-        if isfile(abspath(snip_path)):
-            snip_path = abspath(snip_path)
+            snip_path = settings.get('documentation_snippet', '')
+        if isfile(abspath(snip_path,
+                          vars=self.view.window().extract_variables())):
+            snip_path = abspath(snip_path,
+                                vars=self.view.window().extract_variables())
         elif sublime.find_resources(snip_path):
             snip_path = abspath(sublime.find_resources(snip_path)[-1],
                                 join(sublime.packages_path(), ".."))
         else:
-            msg = '[ERROR] AutoMatlab - Invalid documentation snippet path.'
+            msg = '[ERROR] AutoMatlab - Documentation snippet could not ' \
+                'be found.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
@@ -80,8 +83,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         pattern = r'<!\[CDATA\[([\s\S]*)\]]>'
         mo = re.search(pattern, snip_all)
         if not mo:
-            msg = '[ERROR] AutoMatlab - Documentation snippet could not ' \
-                'be found.'
+            msg = '[ERROR] AutoMatlab - Invalid documentation snippet'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return

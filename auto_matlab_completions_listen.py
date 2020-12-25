@@ -64,25 +64,35 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # load matlab completions
         if settings.get('matlab_completions', True):
             self.load_matlab_completions(view.window())
+        else:
+            self.matlab_completions_mtime = 0
+            self.matlab_completions = collections.OrderedDict({})
 
+        # load project/folder completions
+        self.project_completions_lock.acquire()
         if settings.get('project_completions', True):
             # load project completions
-            self.project_completions_lock.acquire()
             self.project_completions = self.loaded_project_completions.get(
                 view.window().extract_variables().get('project_base_name'), {})
-            self.project_completions_lock.release()
-        if not self.project_completions \
-                and settings.get('current_folder_completions', True):
-            # load current folder completions
-            self.project_completions_lock.acquire()
-            if len(view.window().folders()) == 1:
-                self.project_completions = self.loaded_project_completions.get(
-                    view.window().folders()[0], {})
+        else:
+            self.project_completions = collections.OrderedDict({})
+        if not self.project_completions:
+            if settings.get('current_folder_completions', True):
+                # load current folder completions
+                if len(view.window().folders()) == 1:
+                    self.project_completions = \
+                        self.loaded_project_completions.get(
+                            view.window().folders()[0], {})
+                else:
+                    self.project_completions = \
+                        self.loaded_project_completions.get(
+                            view.window().extract_variables().get(
+                                'file_path'), {})
             else:
-                self.project_completions = self.loaded_project_completions.get(
-                    view.window().extract_variables().get('file_path'), {})
-            self.project_completions_lock.release()
+                self.project_completions = collections.OrderedDict({})
+        self.project_completions_lock.release()
 
+        # load file completions
         file_completions = {}
         if settings.get('current_file_completions', True):
             self.file_completions_lock.acquire()

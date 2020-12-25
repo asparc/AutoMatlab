@@ -53,7 +53,12 @@ def process_signature(signature):
     # decoder = json.JSONDecoder(object_pairs_hook=lambda x: tuple(x))
     # signatures = decoder.decode(data)
     # read json
-    fun_dict = json.loads(data)
+    try:
+        fun_dict = json.loads(data)
+    except:
+        msg = '[WARNING] AutoMatlab - Failed to decode json file: ' + signature
+        print(msg)
+        return []
 
     # extract all function names
     funs = []
