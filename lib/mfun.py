@@ -59,7 +59,8 @@ class mfun:
                 r'^\s*%+[\s%]*((?:\w+\s*=\s*|\[[\w\s\.,]+\]\s*=\s*)?'
                 + self.fun + r'\([^\)]*\))', re.I)
             doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
-            end_regex = re.compile(r'^\s*[^%\s]')
+            # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
+            end_regex = re.compile(r'^\s*$')  # end at first empty line
             snip_regex = re.compile(self.fun + r'\(([^\)]*)\)')
 
             # loop over lines
@@ -80,9 +81,9 @@ class mfun:
                     lline = line.lower()
                     if 'example' in lline:
                         last_def = True
-                    if '#codegen' in lline \
-                            or 'copyright' in lline \
-                            or end_regex.search(line):
+                    if end_regex.search(line) \
+                            or 'copyright' in lline:
+                            # or '#codegen' in lline \
                             # or 'author(s):' in lline \
                             # or 'authors:' in lline \
                             # or 'revised:' in lline \
@@ -148,7 +149,8 @@ class mfun:
 
             # prepare regex patterns
             doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
-            end_regex = re.compile(r'^\s*[^%\s]')
+            # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
+            end_regex = re.compile(r'^\s*$')  # end at first empty line
             def_regex = re.compile(
                 r'^\s*function(.*' + self.fun + r'\(([^\)]*)\))', re.I)
 
@@ -175,9 +177,9 @@ class mfun:
             while line:
                 # interrupt at copyright message or comments end
                 lline = line.lower()
-                if '#codegen' in lline \
-                        or 'copyright' in lline \
-                        or end_regex.search(line):
+                if end_regex.search(line) \
+                        or 'copyright' in lline:
+                        # or '#codegen' in lline \
                         # or 'author(s):' in lline \
                         # or 'authors:' in lline \
                         # or 'revised:' in lline \
