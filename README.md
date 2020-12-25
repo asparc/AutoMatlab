@@ -21,4 +21,6 @@ Project and current file autocompletions are refreshed upon save (so not if save
 
 - run matlab command (sublime variables accepted, extended with $line, $package_parent, $package_member)
 
-- Only for windows, so far
+- Only for windows, not for Mac or Linux
+
+- Explain Ctrl+Space.... and that you have to press it twice because of Sublime....

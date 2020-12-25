@@ -1,8 +1,7 @@
-"""Common function across AutoMatlab
+"""Functions for converting relative path(s) into absolute path(s).
 """
 
 import os
-import os.path
 import re
 
 try:

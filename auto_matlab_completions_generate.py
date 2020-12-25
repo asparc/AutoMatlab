@@ -14,9 +14,9 @@ import sublime_plugin
 def plugin_loaded():
     """Do imports that need to wait for Sublime API initilization
     """
-    global abspath, mfun, constants
-    import AutoMatlab.lib.constants as constants
-    from AutoMatlab.lib.common import abspath
+    global config, abspath, mfun
+    import AutoMatlab.lib.config as config
+    from AutoMatlab.lib.abspath import abspath
     from AutoMatlab.lib.mfun import mfun
 
 
@@ -209,13 +209,13 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
 
         matlabroot = settings.get('matlabroot', 'default')
         if matlabroot == 'default':
-            matlabroot = constants.DEFAULT_MATLABROOT
+            matlabroot = config.DEFAULT_MATLABROOT
         else:
             matlabroot = abspath(matlabroot)
 
         matlab_pathdef_path = settings.get('matlab_pathdef_path', 'default')
         if matlab_pathdef_path == 'default':
-            matlab_pathdef_path = constants.DEFAULT_MATLAB_PATHDEF_PATH
+            matlab_pathdef_path = config.DEFAULT_MATLAB_PATHDEF_PATH
         else:
             matlab_pathdef_path = abspath(matlab_pathdef_path)
 
@@ -301,25 +301,25 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
 
             # process entire dirs
             if (use_signatures_files == 'dir'
-                and constants.SIGNATURES_NAME in files) \
+                and config.SIGNATURES_NAME in files) \
                     or (use_contents_files == 'dir'
-                        and constants.CONTENTS_NAME in files):
+                        and config.CONTENTS_NAME in files):
                 for file in files:
                     self.compose_completion(mfun(join(root, file)))
                 continue
 
             # process signature files
             if use_signatures_files == 'read' \
-                    and constants.SIGNATURES_NAME in files:
+                    and config.SIGNATURES_NAME in files:
                 for fun in process_signature(
-                        join(root, constants.SIGNATURES_NAME)):
+                        join(root, config.SIGNATURES_NAME)):
                     self.compose_completion(mfun(join(root, fun + '.m')))
 
             # process contents files
             if use_contents_files == 'read'\
-                    and constants.CONTENTS_NAME in files:
+                    and config.CONTENTS_NAME in files:
                 for fun in process_contents(
-                        join(root, constants.CONTENTS_NAME)):
+                        join(root, config.CONTENTS_NAME)):
                     self.compose_completion(mfun(join(root, fun + '.m')))
 
         # parse custom include dirs
@@ -361,7 +361,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             sorted(self.matlab_completions.items()))
 
         # store results
-        with open(constants.MATLAB_COMPLETIONS_PATH, 'bw') as fh:
+        with open(config.MATLAB_COMPLETIONS_PATH, 'bw') as fh:
             pickle.dump(sorted_matlab_completions, fh)
 
         self.lock.acquire()

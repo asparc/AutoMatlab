@@ -13,9 +13,9 @@ import sublime_plugin
 def plugin_loaded():
     """Do imports that need to wait for Sublime API initilization
     """
-    global abspath, mfun, constants
-    import AutoMatlab.lib.constants as constants
-    from AutoMatlab.lib.common import abspath
+    global config, abspath, mfun
+    import AutoMatlab.lib.config as config
+    from AutoMatlab.lib.abspath import abspath
     from AutoMatlab.lib.mfun import mfun
 
 
@@ -131,8 +131,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             # postprocess exact match output
             if len(out) == 1:
                 out.append([out[0][0].split('\t')[0] + '\t Easter Egg',
-                            constants.EASTER[random.randrange(
-                                len(constants.EASTER))]])
+                            config.EASTER[random.randrange(
+                                len(config.EASTER))]])
 
             # load settings to see if documentation popup should be shown
             documentation_popup = settings.get(
@@ -466,7 +466,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         self.loaded_project_completions[project] = sorted_completions
         # ensure loaded project completions size stays within sane limits
         if len(self.loaded_project_completions) \
-                > constants.MAX_LOADED_PROJECT_COMPLETIONS:
+                > config.MAX_LOADED_PROJECT_COMPLETIONS:
             popped_key = self.loaded_project_completions.popitem(False)[0]
         self.project_completions_lock.release()
         self.loaded_project_completions_mtime[project] = last_mtime
@@ -476,14 +476,14 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         """Load stored matlab completion data into completion dict
         """
         # check if matlab_completions data exists
-        if isfile(constants.MATLAB_COMPLETIONS_PATH):
+        if isfile(config.MATLAB_COMPLETIONS_PATH):
             # check for update of matlab_completions data
-            mtime = getmtime(constants.MATLAB_COMPLETIONS_PATH)
+            mtime = getmtime(config.MATLAB_COMPLETIONS_PATH)
             if mtime > self.matlab_completions_mtime:
                 self.matlab_completions_mtime = mtime
 
                 # read matlab_completions
-                with open(constants.MATLAB_COMPLETIONS_PATH, 'br') as fh:
+                with open(config.MATLAB_COMPLETIONS_PATH, 'br') as fh:
                     self.matlab_completions = pickle.load(fh)
         else:
             if not self.warned:

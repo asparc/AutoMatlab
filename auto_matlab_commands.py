@@ -19,9 +19,9 @@ last_highlighted_index = -1
 def plugin_loaded():
     """Do imports that need to wait for Sublime API initilization
     """
-    global abspath, constants
-    import AutoMatlab.lib.constants as constants
-    from AutoMatlab.lib.common import abspath
+    global config, abspath
+    import AutoMatlab.lib.config as config
+    from AutoMatlab.lib.abspath import abspath
 
 
 def get_view_content(view_id):
@@ -35,11 +35,10 @@ def extract_matlab_history():
     """Extract commands from matlab history
     """
     settings = sublime.load_settings('AutoMatlab.sublime-settings')
-    history_length = settings.get('matlab_history_length',
-                                  constants.DEFAULT_MATLAB_HISTORY_LENGTH)
+    history_length = settings.get('matlab_history_length', 100)
     history_path = settings.get('matlab_history_path', 'default')
     if history_path == 'default':
-        history_path = constants.DEFAULT_MATLAB_HISTORY_PATH
+        history_path = config.DEFAULT_MATLAB_HISTORY_PATH
     else:
         history_path = abspath(history_path)
 
@@ -97,7 +96,7 @@ class OpenAutoMatlabCommandPanelCommand(sublime_plugin.TextCommand):
         else:
             # show quick panel with 'empty history' message
             self.view.window().show_quick_panel(
-                [constants.EMPTY_MATLAB_HISTORY_MESSAGE], self.selected, 0,
+                [config.EMPTY_MATLAB_HISTORY_MESSAGE], self.selected, 0,
                 0, self.highlighted)
 
     def selected(self, index):
@@ -273,7 +272,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
         ahk_return_focus = settings.get('auto_hotkey_return_focus', True)
         ahk_path = settings.get('auto_hotkey_path', 'default')
         if ahk_path == 'default':
-            ahk_path = constants.DEFAULT_AUTO_HOTKEY_PATH
+            ahk_path = config.DEFAULT_AUTO_HOTKEY_PATH
 
         # check ahk path
         if not isfile(ahk_path):
@@ -284,7 +283,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
 
         # find ahk script
         ahk_script = abspath(sublime.find_resources(
-            constants.AUTO_HOTKEY_SCRIPT)[-1],
+            config.AUTO_HOTKEY_SCRIPT)[-1],
             join(sublime.packages_path(), '..'))
 
         # run command

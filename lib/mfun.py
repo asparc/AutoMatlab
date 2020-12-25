@@ -1,7 +1,7 @@
 import re
 from os.path import split, splitext, isfile
 
-import AutoMatlab.lib.constants as constants
+import AutoMatlab.lib.config as config
 
 
 class mfun:
@@ -21,8 +21,8 @@ class mfun:
 
         # check mfile validity
         if not isfile(self.path) or not self.ext == '.m' \
-                or self.file == constants.SIGNATURES_NAME \
-                or self.file == constants.CONTENTS_NAME:
+                or self.file == config.SIGNATURES_NAME \
+                or self.file == config.CONTENTS_NAME:
             return
 
         if free_format:

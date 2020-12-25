@@ -8,9 +8,8 @@ import sublime_plugin
 def plugin_loaded():
     """Do imports that need to wait for Sublime API initilization
     """
-    global abspath, constants
-    import AutoMatlab.lib.constants as constants
-    from AutoMatlab.lib.common import abspath
+    global abspath
+    from AutoMatlab.lib.abspath import abspath
 
 class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
 
@@ -62,9 +61,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         # read matlab documentation snippet
         snip_path = project_settings.get('documentation_snippet_path')
         if not snip_path:
-            snip_path = settings.get(
-                'documentation_snippet_path',
-                constants.DEFAULT_DOCUMENTATION_SNIPPET_PATH)
+            snip_path = settings.get('documentation_snippet_path', '')
         if isfile(abspath(snip_path)):
             snip_path = abspath(snip_path)
         elif sublime.find_resources(snip_path):
