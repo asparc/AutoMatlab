@@ -10,7 +10,6 @@ Attributes:
     EMPTY_MATLAB_HISTORY_MESSAGE (str): Message to show in command pael when 
         no Matlab history was found.
     AUTO_HOTKEY_SCRIPT (str): Name of AutoHotkey script to run matlab commands
-    AUTO_MATLAB_PATH (str): Path to to AutoMatlab package
     MATLAB_COMPLETIONS_PATH (str): Path to AutoMatlab completions, generated 
         from Matlab installation
     MAX_LOADED_PROJECT_COMPLETIONS (int): Maximum number of projects for which
@@ -18,9 +17,8 @@ Attributes:
     EASTER (list): A list of Matlab easter eggs.
 
 Note: 
-    A number of variables depend on Sublime API functions. They require the
+    Some of variables depend on Sublime API functions. They require the
     Sublime plugin to be loaded before this module is imported:
-    - AUTO_MATLAB_PATH
     - MATLAB_COMPLETIONS_PATH
 """
 
@@ -38,7 +36,8 @@ DEFAULT_MATLABROOT = abspath(matlabroot_pattern, regex=True)
 DEFAULT_MATLAB_HISTORY_PATH = abspath(matlab_history_pattern, regex=True)
 DEFAULT_MATLAB_PATHDEF_PATH = abspath('toolbox/local/pathdef.m',
                                       DEFAULT_MATLABROOT)
-DEFAULT_AUTO_HOTKEY_PATH = abspath('C:/Program Files/AutoHotkey/AutoHotkey.exe')
+DEFAULT_AUTO_HOTKEY_PATH = abspath(
+    'C:/Program Files/AutoHotkey/AutoHotkey.exe')
 
 # standard Matlab files
 CONTENTS_NAME = 'Contents.m'
@@ -49,8 +48,8 @@ EMPTY_MATLAB_HISTORY_MESSAGE = 'Empty Matlab command history'
 AUTO_HOTKEY_SCRIPT = 'run_in_matlab.ahk'
 
 # AutoMatlab completions
-AUTO_MATLAB_PATH = abspath('AutoMatlab', sublime.packages_path())
-MATLAB_COMPLETIONS_PATH = abspath("data/matlab_completions", AUTO_MATLAB_PATH)
+MATLAB_COMPLETIONS_PATH = abspath("AutoMatlab/data/matlab_completions",
+                                  sublime.packages_path())
 MAX_LOADED_PROJECT_COMPLETIONS = 7
 EASTER = ['spy', 'life', 'why', 'image', 'penny', 'shower',
           'xpsound', 'xpquad', 'xpbombs', 'wrldtrv', 'vibes', 'truss',
@@ -59,5 +58,3 @@ EASTER = ['spy', 'life', 'why', 'image', 'penny', 'shower',
           'imagesAndVideo', 'fifteen']
 # toolbox easter eggs: 'rlc_gui', 'sf_tictacflow', 'eml_fire', 'eml_asteroids'
 # failing easter eggs: 'toilet', 'lala', 'shower', 'viper', 'eigshow', 'census'
-
-

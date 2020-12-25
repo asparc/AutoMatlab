@@ -1,6 +1,7 @@
 import re
-from os import listdir, walk
-from os.path import isdir, isfile, join
+from os import listdir, walk, makedirs
+from os.path import isdir, isfile, join, split
+import errno
 import json
 import pickle
 import collections
@@ -361,6 +362,27 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             sorted(self.matlab_completions.items()))
 
         # store results
+        try:
+            # make storage dir if non-existent
+            makedirs(split(config.MATLAB_COMPLETIONS_PATH)[0])
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                self.lock.acquire()
+                self.error = True
+                self.finished = True
+                self.lock.release()
+                self.window.status_message(str(e))
+                raise e
+                return
+        except Exception as e:
+            self.lock.acquire()
+            self.error = True
+            self.finished = True
+            self.lock.release()
+            self.window.status_message(str(e))
+            raise e
+            return
+
         with open(config.MATLAB_COMPLETIONS_PATH, 'bw') as fh:
             pickle.dump(sorted_matlab_completions, fh)
 
