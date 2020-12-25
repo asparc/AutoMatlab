@@ -4,13 +4,40 @@
     // ********************************************************* //
 
     // Matlab installation directory
-    // If set to `default`, AutoMatlab will search in:
+    // If set to `default`, AutoMatlab will look for:
     // - C:/Matlab/RXXXXX
     // - C:/Program Files/MATLAB/RXXXXX'
     "matlabroot": "default",
 
-    // Path to the pathdef.m file (relative to matlabroot).
-    "matlab_pathdef_path": "toolbox/local/pathdef.m",
+    // Path to the pathdef.m file
+    // If set to `default`, AutoMatlab will look for:
+    // <MATLABROOT>/toolbox/local/pathdef.m
+    "matlab_pathdef_path": "default",
+
+    // Path to the History.xml file
+    // If set to `default`, AutoMatlab will look for:
+    // - ~/AppData/Roaming/MathWorks/MATLAB/RXXXXX/History.xml
+    "matlab_history_path": "default",
+
+    // ********************************************************* //
+    // ***************** AutoMatlab commands ******************* //
+    // ********************************************************* //
+
+    // Number of commands from the Matlab history to show in
+    // the AutoMatlab command panel
+    "matlab_history_length": 1000,
+
+    // Path to AutoHotkey executable, used to send commands
+    // from Sublime AutoMatlab to Matlab
+    // If set to `default`, AutoMatlab will look for:
+    // - C:/Program Files/AutoHotkey/AutoHotkey.exe
+    "auto_hotkey_path": "default",
+
+    // When AutoHotkey is used to send a command to Matlab, the
+    // window focus will have changed to Matlab. Specify whether
+    // to return the focus to Sublime after executing a command
+    // in Matlab
+    "auto_hotkey_return_focus": true,
 
     // ********************************************************* //
     // ****** AutoMatlab documentation generation (mdoc) ******* //

@@ -1,6 +1,58 @@
 [
     {
-    	"caption": "AutoMatlab: Generate Completions",
+    	"caption": "AutoMatlab: Generate completions",
     	"command": "generate_auto_matlab_completions"
+    },
+    {
+        "caption": "AutoMatlab: Generate documentation",
+        "command": "generate_auto_matlab_documentation"
+    },
+    {
+        "caption": "AutoMatlab: Open command panel",
+        "command": "open_auto_matlab_command_panel",
+    },
+    {
+        "caption": "AutoMatlab: Toggle AutoHotkey return focus",
+        "command": "toggle_auto_hotkey_focus",
+    },
+    {
+        "caption": "AutoMatlab: Open file",
+        "command": "run_matlab_command",
+        "args": {"command": "matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column);"},
+    },
+    {
+        "caption": "AutoMatlab: Run file",
+        "command": "run_matlab_command",
+        "args": {"command": "$package_member;"},
+    },
+    {
+        "caption": "AutoMatlab: Change folder",
+        "command": "run_matlab_command",
+        "args": {"command": "cd '$package_parent';"},
+    },
+    {
+        "caption": "AutoMatlab: Change folder and run file",
+        "command": "run_matlab_command",
+        "args": {"command": "cd '$package_parent'; $package_member;"},
+    },
+    {
+        "caption": "AutoMatlab: Run selection",
+        "command": "run_matlab_command",
+        "args": {"command": "$selection"},
+    },
+    {
+        "caption": "AutoMatlab: Set breakpoint",
+        "command": "run_matlab_command",
+        "args": {"command": "dbstop in '$file' at $line; matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column);"},
+    },
+    {
+        "caption": "AutoMatlab: Clear breakpoint",
+        "command": "run_matlab_command",
+        "args": {"command": "dbclear in '$file' at $line; matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column)"},
+    },
+    {
+        "caption": "AutoMatlab: Clear all breakpoints",
+        "command": "run_matlab_command",
+        "args": {"command": "dbclear all;"},
     },
 ]

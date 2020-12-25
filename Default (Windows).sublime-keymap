@@ -1,8 +1,98 @@
 [
-    // use ctrl+up/down to move through autocompletion list
+    // Generate function documentation
+    {
+        "keys": ["ctrl+alt+m"], "command": "generate_auto_matlab_documentation",
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+    },
+    // Open Matlab command panel
+    {
+        "keys": ["alt+m"], 
+        "command": "open_auto_matlab_command_panel",
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+    },
+    // Run current file in Matlab
+    {
+        "keys": ["ctrl+b"], 
+        "command": "run_matlab_command",
+        "args": {"command": "$package_member;"},
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+            { "key": "selection_empty", "operator": "equal", "operand": true },
+        ],
+    },
+    // Run current selection in Matlab
+    {
+        "keys": ["ctrl+b"], 
+        "command": "run_matlab_command",
+        "args": {"command": "$selection;"},
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+            { "key": "selection_empty", "operator": "equal", "operand": false },
+        ],
+    },
+    // Change Matlab folder to current folder and run current file in Matlab
+    {
+        "keys": ["ctrl+shift+b"], 
+        "command": "run_matlab_command",
+        "args": {"command": "cd '$package_parent'; $package_member;"},
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+    },
+    // Insert Matlab breakpoint at current line
+    {
+        "keys": ["alt+."], 
+        "command": "run_matlab_command",
+        "args": {"command": "dbstop in '$file' at $line; matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column);"},
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+    },
+    // Clear Matlab breakpoint at current line
+    {
+        "keys": ["alt+,"], 
+        "command": "run_matlab_command",
+        "args": {"command": "dbclear in '$file' at $line; matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column);"},
+        "context": 
+        [
+            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
+        ],
+    },
+    // Insert Matlab history in command panel
+    {
+        "keys": ["right"],
+        "command": "insert_auto_matlab_history",
+        "context": 
+        [
+            { "key": "overlay_visible", "operator": "equal", "operand": true },
+            { "key": "setting.auto_matlab_command_panel" },
+        ]
+    },
+    // Run input from command panel in Matlab
+    {
+        "keys": ["tab"],
+        "command": "run_auto_matlab_command_input",
+        "context": 
+        [
+            { "key": "overlay_visible", "operator": "equal", "operand": true },
+            { "key": "setting.auto_matlab_command_panel" },
+        ]
+    },
+
+    // Navigate through completions list
     {
         "keys": ["ctrl+up"], 
-        "command": "navigate_auto_matlab", "args": {"amount": -1.0 },
+        "command": "navigate_auto_matlab_completions", "args": {"amount": -1.0 },
         "context": 
         [
             {"key": "selector", "operator": "equal", "operand": "source.matlab" },
@@ -12,7 +102,7 @@
     },
     {
         "keys": ["ctrl+down"], 
-        "command": "navigate_auto_matlab", "args": {"amount": 1.0 },
+        "command": "navigate_auto_matlab_completions", "args": {"amount": 1.0 },
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },
@@ -20,22 +110,14 @@
         ],
 
     },
+    // Commit completion 
     {
         "keys": ["ctrl+right"], 
-        "command": "navigate_auto_matlab", "args": {"amount": 0.0 },
+        "command": "navigate_auto_matlab_completions", "args": {"amount": 0.0 },
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },
             { "key": "auto_complete_visible", "operator": "equal", "operand": true },
-        ],
-
-    },
-    {
-        "keys": ["alt+q"], 
-        "command": "generate_auto_matlab_documentation",
-        "context": 
-        [
-            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
         ],
 
     },

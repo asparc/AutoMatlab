@@ -14,10 +14,12 @@ def plugin_loaded():
 
 class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
 
-    """Generate a snippet for documenting matlab functions
+    """Generate a snippet for documenting Matlab functions
     """
 
     def run(self, edit):
+        """Insert snippet for Matlab function
+        """
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
         project_settings = self.view.window().project_data().get(
             'auto_matlab', {})

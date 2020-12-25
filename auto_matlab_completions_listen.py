@@ -19,9 +19,9 @@ def plugin_loaded():
     from AutoMatlab.lib.mfun import mfun
 
 
-class CompletionListener(sublime_plugin.EventListener):
+class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
-    """AutoMatlab event lister for completions
+    """Sublime event lister for completions
     """
 
     def __init__(self):

@@ -1,6 +1,6 @@
 import re
 from os import listdir, walk
-from os.path import join, normpath, isfile, isdir
+from os.path import isdir, isfile, join
 import json
 import pickle
 import collections
@@ -18,40 +18,6 @@ def plugin_loaded():
     import AutoMatlab.lib.constants as constants
     from AutoMatlab.lib.common import abspath
     from AutoMatlab.lib.mfun import mfun
-
-
-def find_matlabroot(search):
-    """Find the Matlab installation directory.
-    """
-    def search_dir(d):
-        if not isdir(d):
-            return False
-        # check logical dirs and subdirs
-        # if exists, add matlab (upper/lower case) to d
-        dirs = listdir(d)
-        d = join(d,
-                 dict(zip([d.lower() for d in dirs], dirs)).get('matlab', ''))
-        # if exists, add most recent matlab version to d
-        dirs = listdir(d)
-        vers = [d for d in sorted(dirs) if re.search(r'R\d+[ab]', d)]
-        d = join(d, vers[-1] if len(vers) else '')
-        # locate matlab.exe and toolsbox
-        if not(isfile(join(d, 'bin', 'matlab.exe'))
-               and isdir(join(d, 'toolbox'))):
-            return False
-
-        # success
-        return normpath(d)
-
-    # check different search options
-    if search == 'default':
-        for d in constants.DEFAULT_MATLABROOT:
-            res = search_dir(normpath(d))
-            if res:
-                return res
-    elif type(search) == str:
-        return search_dir(normpath(search))
-    return False
 
 
 def process_signature(signature):
@@ -138,12 +104,6 @@ def process_pathdef(matlab_pathdef_path, matlabroot):
     abs_dir_regex = re.compile(r"'(.+);'")
     rel_dir_regex = re.compile(r"'[\\\/]*(.+);'")
 
-    # make absolute path
-    matlab_pathdef_path = abspath(matlab_pathdef_path, matlabroot)
-
-    if not isfile(matlab_pathdef_path):
-        return []
-
     # open pathdef file
     with open(matlab_pathdef_path, encoding='cp1252') as fh:
         line = fh.readline()
@@ -183,6 +143,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
     """
 
     def __init__(self, window):
+        """Initialize threads for completion generation
+        """
         super().__init__(window)
         # prepare a (probably unnecessary) thread lock
         self.lock = threading.Lock()
@@ -238,10 +200,6 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
 
         # read settings
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
-        matlab_search_dir = settings.get('matlabroot', 'default')
-        matlab_pathdef_path = \
-            settings.get('matlab_pathdef_path',
-                         constants.DEFAULT_MATLAB_PATHDEF_PATH)
         include_dirs = settings.get('include_dirs', [])
         exclude_dirs = settings.get('exclude_dirs', [])
         exclude_patterns = settings.get('exclude_patterns', [])
@@ -249,9 +207,21 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         use_signatures_files = settings.get('use_signatures_files', 'dir')
         use_matlab_path = settings.get('use_matlab_path', 'ignore')
 
+        matlabroot = settings.get('matlabroot', 'default')
+        if matlabroot == 'default':
+            matlabroot = constants.DEFAULT_MATLABROOT
+        else:
+            matlabroot = abspath(matlabroot)
+
+        matlab_pathdef_path = settings.get('matlab_pathdef_path', 'default')
+        if matlab_pathdef_path == 'default':
+            matlab_pathdef_path = constants.DEFAULT_MATLAB_PATHDEF_PATH
+        else:
+            matlab_pathdef_path = abspath(matlab_pathdef_path)
+
         # assertions
         try:
-            assert type(matlab_search_dir) == str, \
+            assert type(matlabroot) == str, \
                 "[ERROR] AutoMatlab - Matlabroot is not of type 'str'"
             assert type(matlab_pathdef_path) == str, \
                 "[ERROR] AutoMatlab - Matlab_pathdef_path is not of type 'str'"
@@ -276,9 +246,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             raise e
             return
 
-        # check if matlab installation can be found
-        matlabroot = find_matlabroot(matlab_search_dir)
-        if not matlabroot:
+        # check matlabroot
+        if not isfile(join(str(matlabroot), 'bin', 'matlab.exe')):
             self.lock.acquire()
             self.error = True
             self.finished = True
@@ -295,9 +264,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
 
         # read the matlab path and parse its dirs
         if use_matlab_path in ['dir', 'read']:
-            # get dirs in matlab path
-            matlab_path_dirs = process_pathdef(matlab_pathdef_path, matlabroot)
-            if not matlab_path_dirs:
+            # check pathdef file
+            if not isfile(matlab_pathdef_path):
                 self.lock.acquire()
                 self.error = True
                 self.finished = True
@@ -306,6 +274,9 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
                 self.window.status_message(msg)
                 raise Exception(msg)
                 return
+
+            # get dirs in matlab path
+            matlab_path_dirs = process_pathdef(matlab_pathdef_path, matlabroot)
 
             # parse dirs in matlab path
             for path_dir in matlab_path_dirs:
@@ -399,6 +370,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         self.lock.release()
 
     def compose_completion(self, mfun_data):
+        """Compose completion and add to completions dictionary
+        """
         if not mfun_data.valid:
             return
 

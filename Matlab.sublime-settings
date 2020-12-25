@@ -3,10 +3,6 @@
 	[
 		"m"
 	],
-    "rulers":
-    [
-        80
-    ],
     "fallback_encoding": "Western (Windows 1252)",
     "default_encoding": "Western (Windows 1252)"
 }

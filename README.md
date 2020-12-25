@@ -17,4 +17,8 @@ Project and current file autocompletions are refreshed upon save (so not if save
 - Combine with 
     + mlint via SublimeLinter! (other combos?)
     + AutoHotKey
-    + MBeautifier?
+    + MBeautifier? (as run_matlab_command)
+
+- run matlab command (sublime variables accepted, extended with $line, $package_parent, $package_member)
+
+- Only for windows, so far
