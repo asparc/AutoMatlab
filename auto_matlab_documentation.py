@@ -20,8 +20,12 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         """Insert snippet for Matlab function
         """
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
-        project_settings = self.view.window().project_data().get(
-            'auto_matlab', {})
+        project_data = self.view.window().project_data()
+
+        if project_data:
+            project_settings = project_data.get('auto_matlab', {})
+        else:
+            project_settings = {}
 
         # read first line
         region1 = self.view.line(0)
