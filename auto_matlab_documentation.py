@@ -25,7 +25,13 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
 
         # read first line
         region1 = self.view.line(0)
-        line1 = self.view.substr(region1)
+        line1 = self.view.substr(region1).strip()
+
+        # process for multiline function definitions
+        while line1.endswith('...'):
+            region_expand = self.view.line(region1.end() + 1)
+            region1 = region1.cover(region_expand)
+            line1 = line1[:-3] + self.view.substr(region_expand).strip()
 
         # extract function definition components
         pattern = r'^\s*function\s+((?:\[(.*)\]\s*=|(\w+)\s*=|)' \

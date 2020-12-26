@@ -44,7 +44,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # other
         self.locfun_regex = \
             re.compile(r'^\s*function\s+(?:(?:\w+\s*=\s*|'
-                       r'\[[\w\s\.,]+\]\s*=\s*)?(\w+)\([^\)]*\))')
+                       r'\[[\w\s\.,]+\]\s*=\s*)?(\w+)\([^\)]*(\)|\.\.\.))')
 
     def on_query_completions(self, view, prefix, locations):
         """Construct AutoMatlab completion list.
@@ -570,7 +570,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             return [None, None]
 
         doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
-        end_regex = re.compile(r'^\s*[^%\s]')
+        # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
+        end_regex = re.compile(r'^\s*$')  # end at first empty line
         def_regex = re.compile(
             r'^\s*function(.*(' + fun_lower + r')\(([^\)]*)\))', re.I)
 
@@ -589,9 +590,19 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
             # start reading after first non-empty line
             found = False
+            add = ''
             for line in fh:
+                # combine multiline statements
+                multiline = add + line.strip()
+                if multiline.endswith('...'):
+                    add = multiline[:-3]
+                    continue
+                else:
+                    add = ''
+                print(multiline)
+
                 # find function definition
-                mo = def_regex.search(line)
+                mo = def_regex.search(multiline)
                 if mo:
                     found = True
                     # read defintion

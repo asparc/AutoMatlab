@@ -144,7 +144,8 @@ class mfun:
                     return
 
             # check validity of first line
-            if not line.strip().startswith('function'):
+            sline = line.strip()
+            if not sline.startswith('function'):
                 return
 
             # prepare regex patterns
@@ -155,7 +156,14 @@ class mfun:
                 r'^\s*function(.*' + self.fun + r'\(([^\)]*)\))', re.I)
 
             # get function definition from first line
-            mo = def_regex.search(line)
+            while sline.endswith('...'):
+                # multiline definition
+                try:
+                    sline = sline[:-3] + fh.readline().strip()
+                except:
+                    return
+
+            mo = def_regex.search(sline)
             if not mo:
                 return
 
