@@ -72,22 +72,15 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         snip_path = project_settings.get('documentation_snippet')
         if not snip_path:
             snip_path = settings.get('documentation_snippet', '')
-        if isfile(abspath(snip_path,
-                          vars=self.view.window().extract_variables())):
-            snip_path = abspath(snip_path,
-                                vars=self.view.window().extract_variables())
-        elif sublime.find_resources(snip_path):
-            snip_path = abspath(sublime.find_resources(snip_path)[-1],
-                                join(sublime.packages_path(), ".."))
-        else:
+        snip_resources = sublime.find_resources(snip_path)
+        if not snip_resources:
             msg = '[ERROR] AutoMatlab - Documentation snippet could not ' \
                 'be found.'
             self.view.window().status_message(msg)
             raise Exception(msg)
             return
-
-        with open(snip_path) as fh:
-            snip_all = fh.read()
+        snip_all = sublime.load_resource(snip_resources[-1]).replace(
+            '\r\n', '\n')
 
         # extract documentation snippet content
         pattern = r'<!\[CDATA\[([\s\S]*)\]]>'

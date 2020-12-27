@@ -1,7 +1,9 @@
 import re
 import subprocess
 import collections
-from os.path import join, isfile
+import errno
+from os import makedirs
+from os.path import join, isfile, split
 import xml.etree.ElementTree as ET
 
 import sublime
@@ -282,13 +284,33 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
             return
 
         # find ahk script
-        ahk_script = abspath(sublime.find_resources(
-            config.AUTO_HOTKEY_SCRIPT)[-1],
-            join(sublime.packages_path(), '..'))
+        ahk_script_resource = sublime.find_resources(
+            config.AUTO_HOTKEY_SCRIPT)[-1]
+        ahk_script_path = abspath(ahk_script_resource,
+                                  join(sublime.packages_path(), '..'))
+
+        if not isfile(ahk_script_path):
+            # create ahk dir
+            try:
+                makedirs(split(ahk_script_path)[0])
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    self.window.status_message(str(e))
+                    raise e
+                    return
+            except Exception as e:
+                self.window.status_message(str(e))
+                raise e
+                return
+            # create ahk script
+            with open(ahk_script_path, 'w') as fh:
+                fh.write(sublime.load_resource(ahk_script_resource).replace(
+                    '\r\n', '\n'))
 
         # run command
-        subprocess.Popen([ahk_path, ahk_script, command,
+        subprocess.Popen([ahk_path, ahk_script_path, command,
                           '1' if ahk_return_focus else '0'])
+
 
 class ToggleAutoHotkeyFocusCommand(sublime_plugin.WindowCommand):
 
