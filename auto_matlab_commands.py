@@ -272,6 +272,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
         # read ahk settings
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
         ahk_return_focus = settings.get('auto_hotkey_return_focus', True)
+        ahk_sleep_multiplier = settings.get('auto_hotkey_sleep_multiplier', 1)
         ahk_path = settings.get('auto_hotkey_path', 'default')
         if ahk_path == 'default':
             ahk_path = config.DEFAULT_AUTO_HOTKEY_PATH
@@ -308,8 +309,11 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
                     '\r\n', '\n'))
 
         # run command
-        subprocess.Popen([ahk_path, ahk_script_path, command,
-                          '1' if ahk_return_focus else '0'])
+        subprocess.Popen([ahk_path,
+                          ahk_script_path,
+                          command,
+                          '1' if ahk_return_focus else '0',
+                          str(ahk_sleep_multiplier)])
 
 
 class ToggleAutoHotkeyFocusCommand(sublime_plugin.WindowCommand):

@@ -7,10 +7,14 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SublimeID := WinExist("A")
 MatlabID := WinExist("ahk_exe matlab.exe")
 
+; Read sleep time multiplier
+sleep_multiplier = %3%
+
 ; Open Matlab window
 if WinExist("ahk_id" . MatlabID) {
     WinActivate, ahk_id %MatlabID%
-    Sleep 100
+    slp := 100 * sleep_multiplier
+    Sleep %slp%
 }
 else {
     MsgBox,,Sublime AutoMatlab, AutoHotkey cannot find process matlab.exe.
@@ -20,13 +24,15 @@ else {
 ; Focus the Command window
 if WinActive("ahk_id" . MatlabID) {
     Send ^0
-    Sleep 200
+    slp := 200 * sleep_multiplier
+    Sleep %slp%
 }
 
 ; Insert and submit command
 if WinActive("ahk_id" . MatlabID) {
     Send, %1%{Enter}
-    Sleep 200
+    slp := 200 * sleep_multiplier
+    Sleep %slp%
 }
 
 ; Return to Sublime window
