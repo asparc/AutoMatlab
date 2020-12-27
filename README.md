@@ -11,7 +11,21 @@ __Features__:
 
 __Table of Contents__:
 
-[TOC]
+- [Getting started](#getting-started)
+- [Autocompletion](#autocompletion)
+    + [Matlab autocompletion](#matlab-autocompletion)
+    + [Project autocompletion](#project-autocompletion)
+    + [Current folder autocompletion](#current-folder-autocompletion)
+    + [Current file autocompletion](#current-file-autocompletion)
+- [Matlab commands](#matlab-commands)
+    + [AutoMatlab Command Panel](#automatlab-command-panel)
+    + [Predefined commands](#predefined-commands)
+    + [Custom commands](#custom-commands)
+- [Function documentation generation](#function-documentation-generation)
+    + [Predefined documentation template snippets](#predefined-documentation-template-snippets)
+    + [Custom documentation template snippets](#custom-documentation-template-snippets)
+    + [Project-specific documentation format](#project-specific-documentation-format)
+- [Roadmap](#roadmap)
 
 Getting started
 ---------------
