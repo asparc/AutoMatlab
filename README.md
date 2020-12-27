@@ -7,7 +7,7 @@ __Features__:
 
 - Autocomplete any Matlab function!
 - Run Matlab commands from within Sublime Text!
-- Generate templated Matlab function documentation!
+- Generate context-aware Matlab function documentation!
 
 __Table of Contents__:
 
@@ -148,7 +148,7 @@ The AutoMatlab command `run_matlab_command` will expand the default Sublime Text
 Function documentation generation
 ---------------------------------
 
-AutoMatlab provides flexible and adaptive function documentation generation, based on a customizable template snippet. Function documentation can be generated through the Sublime Command Palette or via the keyboard shortcut <kbd>Ctrl + Alt + m</kbd>.
+AutoMatlab provides flexible and context-aware function documentation generation, based on a customizable template snippet. Function documentation can be generated through the Sublime Command Palette or via the keyboard shortcut <kbd>Ctrl + Alt + m</kbd>.
 
 ### Predefined documentation template snippets
 
