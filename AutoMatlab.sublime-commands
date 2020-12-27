@@ -1,10 +1,10 @@
 [
     {
-    	"caption": "AutoMatlab: Generate completions",
+    	"caption": "AutoMatlab: Generate Matlab autocompletion information",
     	"command": "generate_auto_matlab_completions"
     },
     {
-        "caption": "AutoMatlab: Generate documentation",
+        "caption": "AutoMatlab: Generate function documentation",
         "command": "generate_auto_matlab_documentation"
     },
     {

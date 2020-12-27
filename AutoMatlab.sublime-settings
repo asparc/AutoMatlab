@@ -100,7 +100,7 @@
     "ctrl_right_commit": false,
 
     // ********************************************************* //
-    // ************ Matlab autocompletion resources ************ //
+    // ************* Matlab autocompletion sources ************* //
     // ********************************************************* //
 
     // Matlab contains summaries of functions in Contents.m files.
@@ -136,10 +136,10 @@
     //   (except for the exclude_pattern "+", if present).
     "include_dirs":
     [
-       // "toolbox/shared/controllib/engine/@DynamicSystem",
-       // "toolbox/shared/controllib/engine/@StaticModel",
-       // "toolbox/control/ctrldesign/@ss",
-       // "toolbox/matlab/matfun",
+       "toolbox/shared/controllib/engine/@DynamicSystem",
+       "toolbox/shared/controllib/engine/@StaticModel",
+       "toolbox/control/ctrldesign/@ss",
+       "toolbox/matlab/matfun",
        // "~/Documents/MATLAB/*",
        // "~/Documents/MATLAB/+",
     ],
