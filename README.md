@@ -55,7 +55,7 @@ It is possible to define custom Matlab commands, which can be assigned to keyboa
 {
     "caption": "AutoMatlab: Print status",
     "command": "run_matlab_command",
-    "args": {"command": "disp('I am editing file $file at line $line.')"}
+    "args": {"command": "disp('I am editing file $file_name at line $line.')"}
 }
 ```
 
@@ -71,11 +71,29 @@ The AutoMatlab command `run_matlab_command` will expand the default Sublime Text
 Function documentation generation
 ---------------------------------
 
-AutoMatlab provides flexible function documentation generation, based on a customizable template snippet. This functionality can be activated  documentation can be generated through the Sublime Command Palette or via the keyboard shortcut <kbd>Ctrl + Alt + m</kbd>.
+AutoMatlab provides flexible and adaptive function documentation generation, based on a customizable template snippet. Function documentation can be generated through the Sublime Command Palette or via the keyboard shortcut <kbd>Ctrl + Alt + m</kbd>.
 
-![Function documentation generation](fig/documentation.png)
+### Predefined documentation template snippets
 
-### Custom template snippet
+AutoMatlab provides a number of predefined documentation template snippets. These template snippets follow the function documentation format that is employed by The Mathworks: they comprise a one-line function description and at least one function signature. Furthermore, they are adaptive, in the sense that they substitute elements from the function definition into the snippet. 
+
+In the AutoMatlab settings, the predefined documentation template snippets can be selected by setting `documentation_snippet` to one of the following values:
+
+- `matlab_documentation.sublime-snippet` (default)
+
+![Template snippet default](fig/documentation_matlab.png)
+
+- `matlab_documentation_args.sublime-snippet`
+
+![Template snippet args](fig/documentation_args.png)
+
+- `matlab_documentation_args_in_out.sublime-snippet`
+
+![Template snippet args in out](fig/documentation_args_in_out.png)
+
+### Custom documentation template snippets
+
+AutoMatlab also supports custom documentation template snippets. To create those, start from the below example, add/remove/adapt as desired, and save the result as a `.sublime-snippet` file. Finally, set the `documentation_snippet` in the AutoMatlab settings to the name or path of the created template snippet.
 
 ```xml
 <snippet>
@@ -105,7 +123,7 @@ AutoMatlab provides flexible function documentation generation, based on a custo
 
 ### Project-specific documentation format
 
-Optional entries
+The following settings can be added to the `.sublime-project` file to adapt the generated function documentation on a per-project basis.
 
 ```json
 {

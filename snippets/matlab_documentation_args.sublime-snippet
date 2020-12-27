@@ -5,10 +5,13 @@
 %
 % ${MDOC_SIGNATURE} ${2:<explain usage>}${MDOC_SIGNATURE_MARKER}
 % 
-% See also ${3:<list related>}${MDOC_SEE_ALSO_MARKER}
+% ${MDOC_ARG_BLOCK_MARKER}
+% ${MDOC_ARG}: ${3:<description>}${MDOC_ARG_MARKER}
+%
+% See also ${4:<list related>}${MDOC_SEE_ALSO_MARKER}
 
-% Author(s): ${4:<authors>}${MDOC_AUTHOR_MARKER}
-% Copyright ${5:<year>} ${6:<owner>}${MDOC_COPYRIGHT_MARKER}
+% Author(s): ${5:<authors>}${MDOC_AUTHOR_MARKER}
+% Copyright ${6:<year>} ${7:<owner>}${MDOC_COPYRIGHT_MARKER}
 ]]></content>
 <scope>source.matlab</scope>
 </snippet>
