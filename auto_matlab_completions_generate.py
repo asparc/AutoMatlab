@@ -366,10 +366,13 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         sorted_matlab_completions = collections.OrderedDict(
             sorted(self.matlab_completions.items()))
 
-        # store results
+        # get store path
+        storage_path = abspath(config.MATLAB_COMPLETIONS_PATH, 
+            sublime.packages_path())
+
         try:
             # make storage dir if non-existent
-            makedirs(split(config.MATLAB_COMPLETIONS_PATH)[0])
+            makedirs(split(storage_path)[0])
         except OSError as e:
             if e.errno != errno.EEXIST:
                 self.lock.acquire()
@@ -388,7 +391,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             raise e
             return
 
-        with open(config.MATLAB_COMPLETIONS_PATH, 'bw') as fh:
+        # store results
+        with open(storage_path, 'bw') as fh:
             pickle.dump(sorted_matlab_completions, fh)
 
         self.lock.acquire()

@@ -48,8 +48,7 @@ EMPTY_MATLAB_HISTORY_MESSAGE = 'Empty Matlab command history'
 AUTO_HOTKEY_SCRIPT = 'run_in_matlab.ahk'
 
 # AutoMatlab completions
-MATLAB_COMPLETIONS_PATH = abspath("AutoMatlab/data/matlab_completions",
-                                  sublime.packages_path())
+MATLAB_COMPLETIONS_PATH = "AutoMatlab/data/matlab_completions"
 MAX_LOADED_PROJECT_COMPLETIONS = 7
 EASTER = ['spy', 'life', 'why', 'image', 'penny', 'shower',
           'xpsound', 'xpquad', 'xpbombs', 'wrldtrv', 'vibes', 'truss',

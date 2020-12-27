@@ -4,7 +4,7 @@ import collections
 import re
 import threading
 from os import walk
-from os.path import isfile, splitext, getmtime, join
+from os.path import isfile, splitext, getmtime, join, split
 
 import sublime
 import sublime_plugin
@@ -485,23 +485,39 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
     def load_matlab_completions(self, window):
         """Load stored matlab completion data into completion dict
         """
-        # check if matlab_completions data exists
-        if isfile(config.MATLAB_COMPLETIONS_PATH):
+        completions_name = split(config.MATLAB_COMPLETIONS_PATH)[-1]
+        completions_path = abspath(
+            sublime.find_resources(completions_name)[-1],
+            join(sublime.packages_path(), ".."))
+
+        if isfile(completions_path):
+            # load user-generated matlab completions data
+            mtime = getmtime(completions_path)
             # check for update of matlab_completions data
-            mtime = getmtime(config.MATLAB_COMPLETIONS_PATH)
             if mtime > self.matlab_completions_mtime:
                 self.matlab_completions_mtime = mtime
 
                 # read matlab_completions
-                with open(config.MATLAB_COMPLETIONS_PATH, 'br') as fh:
+                with open(completions_path, 'br') as fh:
                     self.matlab_completions = pickle.load(fh)
         else:
-            if not self.warned:
-                self.warned = True
-                msg = '[WARNING] AutoMatlab - No Matlab completions found. ' \
-                    'Try generating them through the command palette.'
-                print(msg)
-                window.status_message(msg)
+            # load default matlab completions data
+            if not self.matlab_completions:
+                try:
+                    # read binary sublime resource
+                    completions_bytes = \
+                        sublime.load_binary_resource(sublime.find_resources(
+                            completions_name)[-1])
+                    self.matlab_completions = pickle.loads(completions_bytes)
+                except:
+                    self.matlab_completions = collections.OrderedDict({})
+
+        if not self.matlab_completions and not self.warned:
+            self.warned = True
+            msg = '[WARNING] AutoMatlab - No Matlab completions found. ' \
+                'Try generating them through the command palette.'
+            print(msg)
+            window.status_message(msg)
 
     def create_hrefs(self, details):
         """Detailed Matlab function documentation contains references to
