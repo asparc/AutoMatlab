@@ -109,7 +109,7 @@ If [AutoHotkey](https://www.autohotkey.com/) is installed, AutoMatlab can send c
 
 The AutoMatlab Command Panel can be accessed through the Sublime Command Palette or via <kbd>Alt + m</kbd>. It shows command suggestions from the recent Matlab history. If no history is shown, make sure `matlab_history_path` is correctly set in the AutoMatlab settings. 
 
-From AutoMatlab Command Panel, commands can run in Matlab:
+Through the AutoMatlab Command Panel, commands can be transferred to Matlab:
 
 - <kbd>Enter</kbd> Run the selected history entry in Matlab.
 - <kbd>&rarr;</kbd> Insert the selected history entry into the AutoMatlab Command Panel.
@@ -117,7 +117,7 @@ From AutoMatlab Command Panel, commands can run in Matlab:
 
 ### Predefined commands
 
-A number of useful Matlab commands has been predefined. They can be run through the Sublime Command Palette or via keyboard shortcuts. Some examples:
+A number of useful Matlab commands have been predefined. They can be run through the Sublime Command Palette or via keyboard shortcuts. Some examples:
 
 - <kbd>Ctrl + b</kbd> Run the current file in Matlab.
 - <kbd>Ctrl + Shift + b</kbd> Change the current folder and run the current file in Matlab.
@@ -154,7 +154,7 @@ AutoMatlab provides flexible and context-aware function documentation generation
 
 AutoMatlab provides a number of predefined documentation template snippets. These template snippets follow the function documentation format that is employed by The MathWorks: they comprise a one-line function description and at least one function signature. Furthermore, they are adaptive, in the sense that they substitute elements from the function definition into the snippet. 
 
-In the AutoMatlab settings, the predefined documentation template snippets can be selected by setting `documentation_snippet` to one of the following values:
+In the AutoMatlab settings, a predefined documentation template snippet can be selected by setting `documentation_snippet` to one of the following values:
 
 - `matlab_documentation.sublime-snippet` (default)
 
