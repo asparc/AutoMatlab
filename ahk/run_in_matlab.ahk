@@ -30,7 +30,8 @@ if WinActive("ahk_id" . MatlabID) {
 
 ; Insert and submit command
 if WinActive("ahk_id" . MatlabID) {
-    Send, %1%{Enter}
+    SendInput {Text}%1%
+    SendInput {Enter}
     slp := 200 * sleep_multiplier
     Sleep %slp%
 }
