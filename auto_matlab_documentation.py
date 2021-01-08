@@ -44,7 +44,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
         if not mo:
             msg = '[WARNING] AutoMatlab - Could not find Matlab ' \
                 'function signature.'
-            print(msg)
+            # print(msg)
             self.view.window().status_message(msg)
             return
 
@@ -136,7 +136,7 @@ class GenerateAutoMatlabDocumentationCommand(sublime_plugin.TextCommand):
                     'insert_snippet', {'contents': snip + '\n\n'})
         else:
             msg = '[WARNING] AutoMatlab - Documentation already exists.'
-            print(msg)
+            # print(msg)
             self.view.window().status_message(msg)
             return
 

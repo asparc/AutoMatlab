@@ -516,7 +516,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             self.warned = True
             msg = '[WARNING] AutoMatlab - No Matlab completions found. ' \
                 'Try generating them through the command palette.'
-            print(msg)
+            # print(msg)
             window.status_message(msg)
 
     def create_hrefs(self, details):
@@ -615,7 +615,6 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                     continue
                 else:
                     add = ''
-                print(multiline)
 
                 # find function definition
                 mo = def_regex.search(multiline)

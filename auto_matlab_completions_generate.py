@@ -57,7 +57,7 @@ def process_signature(signature):
         fun_dict = json.loads(data)
     except:
         msg = '[WARNING] AutoMatlab - Failed to decode json file: ' + signature
-        print(msg)
+        # print(msg)
         return []
 
     # extract all function names
@@ -174,7 +174,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         else:
             msg = '[INFO] AutoMatlab - Matlab completions are already ' \
                 'being generated'
-            print(msg)
+            # print(msg)
             self.window.status_message(msg)
 
     def show_status(self):
@@ -195,7 +195,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
                 if not self.error:
                     msg = '[INFO] AutoMatlab - Found {}'.format(
                         self.n_completions) + ' Matlab function completions'
-                    print(msg)
+                    # print(msg)
                     self.window.status_message(msg)
             self.lock.release()
 

@@ -87,7 +87,7 @@ class OpenAutoMatlabCommandPanelCommand(sublime_plugin.TextCommand):
         matlab_history = extract_matlab_history()
         if matlab_history == None:
             msg = '[WARNING] AutoMatlab - Specified History.xml is invalid'
-            print(msg)
+            # print(msg)
             self.view.window().status_message(msg)
 
         if matlab_history:
@@ -339,5 +339,5 @@ class ToggleAutoHotkeyFocusCommand(sublime_plugin.WindowCommand):
         else:
             msg = '[INFO] AutoMatlab - AutoHotkey return focus deactiveted ' \
                 '(non-persistent)'
-        print(msg)
+        # print(msg)
         self.window.status_message(msg)
