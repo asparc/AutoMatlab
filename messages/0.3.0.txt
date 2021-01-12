@@ -1,1 +1,0 @@
-AutoMatlab cleans up its data after removal through package control.
