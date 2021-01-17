@@ -130,7 +130,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                                 mfun_data.snips[i]])
         elif prefix in self.matlab_completions.keys():
             # read mfun from mfile to extract all data
-            mfun_data = mfun(self.matlab_completions[prefix][2])
+            mfun_data = mfun(abspath(self.matlab_completions[prefix][2],
+                config.DEFAULT_MATLABROOT))
             if mfun_data.valid:
                 details = self.create_hrefs(mfun_data.details)
                 for i in range(len(mfun_data.defs)):

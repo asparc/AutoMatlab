@@ -407,5 +407,9 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             return
 
         # add data to matlab completions
+        if mfun_data.path.startswith(config.DEFAULT_MATLABROOT + '\\'):
+            crop = len(config.DEFAULT_MATLABROOT) + 1
+        else:
+            crop = 0
         self.matlab_completions[mfun_data.fun.lower()] = \
-            [mfun_data.fun, mfun_data.annotation, mfun_data.path]
+            [mfun_data.fun, mfun_data.annotation, mfun_data.path[crop:]]
