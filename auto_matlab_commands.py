@@ -261,7 +261,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
                 vars['selection'] += view.substr(region)
 
         # update the matlab package parent and package member
-        mo = re.search(r'(.*\\(?!\+).*?|.*)\\\+?(.*)\.m', vars['file'])
+        mo = re.search(r'(.*\\(?!\+).*?|.*)\\\+?(.*)\.m', vars.get('file', ''))
         if mo:
             vars['package_parent'] = mo.group(1)
             vars['package_member'] = re.sub(r'\\\+?', '.', mo.group(2))
