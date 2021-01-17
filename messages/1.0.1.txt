@@ -1,0 +1,5 @@
+Changes in 1.0.1
+================
+
+- Robustified default Matlab completions through independence of installed Matlab version.
+- Fixed errors when the default Sublime Text `untitled` file is sent to Matlab.
