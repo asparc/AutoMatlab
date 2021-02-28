@@ -156,6 +156,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         self.lock = threading.Lock()
         self.finished = True
         self.n_completions = 0
+        self.matlabroot = ''
 
     def run(self):
         """Start threads for generating matlab completion
@@ -184,7 +185,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         while busy:
             # create moving status bar position
             pos = abs(int(time.time() % 1.5 * 4) - 3)
-            msg = "[{}] AutoMatlab - Generating Matlab completions".format(
+            msg = "[{}] AutoMatlab - Generating Matlab completions. " \
+                "This might take several minutues".format(
                 " " * pos + "=" + " " * (3 - pos))
             self.window.status_message(msg)
             time.sleep(0.125)
@@ -213,21 +215,20 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
         use_signatures_files = settings.get('use_signatures_files', 'dir')
         use_matlab_path = settings.get('use_matlab_path', 'ignore')
 
-        matlabroot = settings.get('matlabroot', 'default')
-        if matlabroot == 'default':
-            matlabroot = config.DEFAULT_MATLABROOT
+        self.matlabroot = settings.get('matlabroot', 'default')
+        if self.matlabroot == 'default':
+            self.matlabroot = config.DEFAULT_MATLABROOT
         else:
-            matlabroot = abspath(matlabroot)
+            self.matlabroot = abspath(self.matlabroot)
 
         matlab_pathdef_path = settings.get('matlab_pathdef_path', 'default')
         if matlab_pathdef_path == 'default':
             matlab_pathdef_path = config.DEFAULT_MATLAB_PATHDEF_PATH
-        else:
-            matlab_pathdef_path = abspath(matlab_pathdef_path)
+        matlab_pathdef_path = abspath(matlab_pathdef_path, self.matlabroot)
 
         # assertions
         try:
-            assert type(matlabroot) == str, \
+            assert type(self.matlabroot) == str, \
                 "[ERROR] AutoMatlab - Matlabroot is not of type 'str'"
             assert type(matlab_pathdef_path) == str, \
                 "[ERROR] AutoMatlab - Matlab_pathdef_path is not of type 'str'"
@@ -253,7 +254,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             return
 
         # check matlabroot
-        if not isfile(join(str(matlabroot), 'bin', 'matlab.exe')):
+        if not isfile(join(str(self.matlabroot), 'bin', 'matlab.exe')):
             self.lock.acquire()
             self.error = True
             self.finished = True
@@ -265,8 +266,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             return
 
         # process include/exclude dirs
-        include_dirs = abspath(include_dirs, matlabroot)
-        exclude_dirs = abspath(exclude_dirs, matlabroot)
+        include_dirs = abspath(include_dirs, self.matlabroot)
+        exclude_dirs = abspath(exclude_dirs, self.matlabroot)
 
         # read the matlab path and parse its dirs
         if use_matlab_path in ['dir', 'read']:
@@ -282,7 +283,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
                 return
 
             # get dirs in matlab path
-            matlab_path_dirs = process_pathdef(matlab_pathdef_path, matlabroot)
+            matlab_path_dirs = process_pathdef(matlab_pathdef_path, 
+                self.matlabroot)
 
             # parse dirs in matlab path
             for path_dir in matlab_path_dirs:
@@ -299,7 +301,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
                         self.compose_completion(mfun(join(path_dir, file)))
 
         # walk through files of matlab toolboxes
-        for root, dirs, files in walk(join(matlabroot, 'toolbox')):
+        for root, dirs, files in walk(join(self.matlabroot, 'toolbox')):
             # apply exclude dirs and patterns
             if any([excl for excl in exclude_dirs if root.startswith(excl)]) \
                     or any([excl for excl in exclude_patterns if excl in root]):
@@ -407,8 +409,8 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             return
 
         # add data to matlab completions
-        if mfun_data.path.startswith(config.DEFAULT_MATLABROOT + '\\'):
-            crop = len(config.DEFAULT_MATLABROOT) + 1
+        if mfun_data.path.startswith(self.matlabroot + '\\'):
+            crop = len(self.matlabroot) + 1
         else:
             crop = 0
         self.matlab_completions[mfun_data.fun.lower()] = \

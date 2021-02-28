@@ -1,0 +1,5 @@
+Changes in 1.0.2
+================
+
+- Bugfix: Non-default Matlab installation path fixed.
+- Bugfix: Clickable 'See also'-hyperlinks fixed.

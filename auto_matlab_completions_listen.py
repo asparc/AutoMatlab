@@ -61,6 +61,13 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # read settings
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
 
+        # read matlabroot
+        matlabroot = settings.get('matlabroot', 'default')
+        if matlabroot == 'default':
+            matlabroot = config.DEFAULT_MATLABROOT
+        else:
+            matlabroot = abspath(matlabroot)
+
         # load matlab completions
         if settings.get('matlab_completions', True):
             self.load_matlab_completions(view.window())
@@ -131,7 +138,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         elif prefix in self.matlab_completions.keys():
             # read mfun from mfile to extract all data
             mfun_data = mfun(abspath(self.matlab_completions[prefix][2],
-                config.DEFAULT_MATLABROOT))
+                matlabroot))
             if mfun_data.valid:
                 details = self.create_hrefs(mfun_data.details)
                 for i in range(len(mfun_data.defs)):
@@ -554,10 +561,11 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
     def update_details_popup(self, fun):
         """Process clicks on hrefs in the function details popup
         """
+        # load settings
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
         # get mfun data from project or matlab completions
         if fun in self.project_completions.keys():
             # read project documentation format from settings
-            settings = sublime.load_settings('AutoMatlab.sublime-settings')
             if sublime.active_window().project_data():
                 project_settings = sublime.active_window().project_data().get(
                     'auto_matlab', {})
@@ -573,7 +581,14 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             mfun_data = mfun(self.project_completions.get(fun)[2], free_format)
         else:
             # read mfun
-            mfun_data = mfun(self.matlab_completions.get(fun)[2])
+            matlabroot = settings.get('matlabroot', 'default')
+            if matlabroot == 'default':
+                matlabroot = config.DEFAULT_MATLABROOT
+            else:
+                matlabroot = abspath(matlabroot)
+
+            mfun_data = mfun(abspath(self.matlab_completions.get(fun)[2],
+                matlabroot))
 
         # update popup contents
         if mfun_data.valid:

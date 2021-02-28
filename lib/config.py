@@ -34,8 +34,7 @@ matlab_history_pattern = \
 
 DEFAULT_MATLABROOT = abspath(matlabroot_pattern, regex=True)
 DEFAULT_MATLAB_HISTORY_PATH = abspath(matlab_history_pattern, regex=True)
-DEFAULT_MATLAB_PATHDEF_PATH = abspath('toolbox/local/pathdef.m',
-                                      DEFAULT_MATLABROOT)
+DEFAULT_MATLAB_PATHDEF_PATH = 'toolbox/local/pathdef.m'
 DEFAULT_AUTO_HOTKEY_PATH = abspath(
     'C:/Program Files/AutoHotkey/AutoHotkey.exe')
 

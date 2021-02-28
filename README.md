@@ -69,7 +69,7 @@ AutoMatlab comes by default with autocompletion information for about 3000 built
     - (Optional) Fine-tune the sources for the autocompletion information in the section `Matlab autocompletion sources`. All fine-tuning options are documented in the default AutoMatlab settings file.
 2. Open the Sublime Command Palette:
     - Run `AutoMatlab: Generate Matlab autocompletion information`. AutoMatlab will parse the specified directories, searching for Matlab functions that adhere to the documentation format used by The MathWorks.
-    - Wait for the process to finish (see status bar). This can take up to a minute.
+    - Wait for the process to finish (see status bar). This can take several minutes, depending on the Matlab installation.
 3. Done! The newly generated autocompletion information is stored in `Packages\AutoMatlab\data\matlab_completions`.
 
 ### Project autocompletion
