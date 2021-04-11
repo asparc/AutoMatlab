@@ -7,8 +7,6 @@ Attributes:
     DEFAULT_AUTO_HOTKEY_PATH (str): Default path to AutoHotkey executable
     CONTENTS_NAME (str): Name of Matlab contents file
     SIGNATURES_NAME (str): Name of Matlab signatures file
-    EMPTY_MATLAB_HISTORY_MESSAGE (str): Message to show in command pael when 
-        no Matlab history was found.
     AUTO_HOTKEY_SCRIPT (str): Name of AutoHotkey script to run matlab commands
     MATLAB_COMPLETIONS_PATH (str): Path to AutoMatlab completions, generated 
         from Matlab installation
@@ -43,7 +41,6 @@ CONTENTS_NAME = 'Contents.m'
 SIGNATURES_NAME = 'functionSignatures.json'
 
 # AutoMatlab commands
-EMPTY_MATLAB_HISTORY_MESSAGE = 'Empty Matlab command history'
 AUTO_HOTKEY_SCRIPT = 'run_in_matlab.ahk'
 
 # AutoMatlab completions

@@ -98,7 +98,7 @@ class OpenAutoMatlabCommandPanelCommand(sublime_plugin.TextCommand):
         else:
             # show quick panel with 'empty history' message
             self.view.window().show_quick_panel(
-                [config.EMPTY_MATLAB_HISTORY_MESSAGE], self.selected, 0,
+                ['Empty Matlab command history'], self.selected, 0,
                 0, self.highlighted)
 
     def selected(self, index):
@@ -238,7 +238,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
     """Run a command in Matlab, via AutoHotkey
     """
 
-    def run(self, command):
+    def run(self, command, type='text'):
         """Run the provided command in Matlab, using AutoHotkey.
         Any sublime variable in the command will be replaced by its value.
         """
@@ -276,6 +276,13 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
         ahk_path = settings.get('auto_hotkey_path', 'default')
         if ahk_path == 'default':
             ahk_path = config.DEFAULT_AUTO_HOTKEY_PATH
+        if type == 'key':
+            command_type = type
+        else:
+            if settings.get('auto_hotkey_paste_commands', True):
+                command_type = 'paste'
+            else:
+                command_type = 'insert'
 
         # check ahk path
         if not isfile(ahk_path):
@@ -312,6 +319,7 @@ class RunMatlabCommandCommand(sublime_plugin.WindowCommand):
         subprocess.Popen([ahk_path,
                           ahk_script_path,
                           command,
+                          command_type,
                           '1' if ahk_return_focus else '0',
                           str(ahk_sleep_multiplier)])
 
