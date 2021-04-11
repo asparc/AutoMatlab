@@ -20,12 +20,12 @@ __Table of Contents__:
 - [Matlab commands](#matlab-commands)
     + [AutoMatlab Command Panel](#automatlab-command-panel)
     + [Predefined commands](#predefined-commands)
-    + [Custom commands](#custom-commands)
+    + [Custom commands: Matlab Command Window](#custom-commands-matlab-command-window)
+    + [Custom commands: Matlab keyboard shortcuts](#custom-commands-matlab-keyboard-shortcuts)
 - [Function documentation generation](#function-documentation-generation)
     + [Predefined documentation template snippets](#predefined-documentation-template-snippets)
     + [Custom documentation template snippets](#custom-documentation-template-snippets)
     + [Project-specific documentation format](#project-specific-documentation-format)
-- [Roadmap](#roadmap)
 
 Getting started
 ---------------
@@ -104,7 +104,7 @@ AutoMatlab provides autocompletion information for local Matlab functions inside
 Matlab commands
 ---------------
 
-If [AutoHotkey](https://www.autohotkey.com/) is installed, AutoMatlab can send commands to Matlab, to be run in Matlab's Command Window.
+If [AutoHotkey](https://www.autohotkey.com/) is installed, AutoMatlab can send commands to Matlab, to be run in the Matlab Command Window.
 
 ### AutoMatlab Command Panel
 
@@ -112,7 +112,7 @@ If [AutoHotkey](https://www.autohotkey.com/) is installed, AutoMatlab can send c
 
 The AutoMatlab Command Panel can be accessed through the Sublime Command Palette or via <kbd>Alt + m</kbd>. It shows command suggestions from the recent Matlab history. If no history is shown, make sure `matlab_history_path` is correctly set in the AutoMatlab settings. 
 
-Through the AutoMatlab Command Panel, commands can be transferred to Matlab:
+Through the AutoMatlab Command Panel, commands can be sent to Matlab:
 
 - <kbd>Enter</kbd> Run the selected history entry in Matlab.
 - <kbd>&rarr;</kbd> Insert the selected history entry into the AutoMatlab Command Panel.
@@ -120,16 +120,16 @@ Through the AutoMatlab Command Panel, commands can be transferred to Matlab:
 
 ### Predefined commands
 
-A number of useful Matlab commands have been predefined. They can be run through the Sublime Command Palette or via keyboard shortcuts. Some examples:
+A number of useful commands have been predefined. They can be run through the Sublime Command Palette or via keyboard shortcuts. Some examples:
 
 - <kbd>Ctrl + b</kbd> Run the current file in Matlab.
 - <kbd>Ctrl + Shift + b</kbd> Change the current folder and run the current file in Matlab.
 - <kbd>Alt + .</kbd> Set a Matlab breakpoint at the current line.
 - <kbd>Alt + ,</kbd> Clear the Matlab breakpoint from the current line.
 
-### Custom commands
+### Custom commands: Matlab Command Window
 
-It is possible to define custom Matlab commands, which can be assigned to keyboard shortcuts or added to the Sublime Command Palette. For custom Matlab commands, use the AutoMatlab command `run_matlab_command` as follows:
+It is possible to define custom AutoHotkey commands that execute text commands inside the Matlab Command Window. These AutoMatlab commands can be added to the Sublime Key Bindings or to the Sublime Command Palette. To create custom commands for the Matlab Command Window, use the AutoMatlab command `run_matlab_command` as follows:
 
 ```json
 {
@@ -147,6 +147,20 @@ The AutoMatlab command `run_matlab_command` will expand the default Sublime Text
   Example: `C:\Users\Foo\myproject\+mypack\myfun.m` &rarr; `mypack.myfun`.
 - `$package_parent`: The path of the parent directory for the currently opened Matlab package.
   Example: `C:\Users\Foo\myproject\+mypack\myfun.m` &rarr; `C:\Users\Foo\myproject`.
+
+### Custom commands: Matlab keyboard shortcuts
+
+It is possible to define custom AutoHotkey commands that execute Matlab keyboard shortcuts inside Matlab. These AutoMatlab commands can be added to the Sublime Key Bindings or to the Sublime Command Palette. To create custom commands that run keyboard shortcuts in Matlab, use the AutoMatlab command `run_matlab_command` as follows:
+
+```json
+{
+    "caption": "AutoMatlab: Stop execution",
+    "command": "run_matlab_command",
+    "args": {"command": "^c", "type": "key"}
+}
+```
+
+These commands use the syntax of the `SendInput` function of AutoHotkey. For more details on this syntax, see the sections _Parameters_ and _Key names_ in the AutoHotkey [documentation](https://www.autohotkey.com/docs/commands/Send.htm).
 
 Function documentation generation
 ---------------------------------
