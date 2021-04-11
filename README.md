@@ -37,7 +37,10 @@ Getting started
 - __Function documentation generation__
   Works out of the box! Try pressing <kbd>Ctrl + Alt + m</kbd> in a Matlab function file to see what it does. If you are interested in more tailored functionality, have a look [here](#function-documentation-generation). 
 
-*Note: AutoMatlab currently only supports Matlab installations on __Windows__*.
+*Note 1: AutoMatlab currently only supports Matlab installations on __Windows__*.
+*Note 2: Make sure that the syntax of `.m` files is set to Matlab (by default):*
+
+    View > Syntax (> Open all with current extension as...) > Matlab
 
 Autocompletion
 --------------
@@ -211,13 +214,3 @@ The following settings can be added to the `.sublime-project` file to adapt the 
     }
 }
 ```
-
-Roadmap
--------
-
-- [ ] Support for Matlab classes
-    - [ ] Class autocompletion
-    - [ ] Class documentation generation
-- [ ] Support for other OS's
-    - [ ] Mac
-    - [ ] Linux
