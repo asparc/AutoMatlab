@@ -20,7 +20,7 @@
     {
         "keys": ["ctrl+b"], 
         "command": "run_matlab_command",
-        "args": {"command": "$package_member;"},
+        "args": {"command": "$package_member"},
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },
@@ -31,7 +31,7 @@
     {
         "keys": ["ctrl+b"], 
         "command": "run_matlab_command",
-        "args": {"command": "$selection;"},
+        "args": {"command": "$selection"},
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },
@@ -42,7 +42,7 @@
     {
         "keys": ["ctrl+shift+b"], 
         "command": "run_matlab_command",
-        "args": {"command": "cd '$package_parent'; $package_member;"},
+        "args": {"command": "cd '$package_parent'; $package_member"},
         "context": 
         [
             { "key": "selector", "operator": "equal", "operand": "source.matlab" },

@@ -23,7 +23,7 @@
     {
         "caption": "AutoMatlab: Run file",
         "command": "run_matlab_command",
-        "args": {"command": "$package_member;"},
+        "args": {"command": "$package_member"},
     },
     {
         "caption": "AutoMatlab: Change folder",
@@ -33,7 +33,7 @@
     {
         "caption": "AutoMatlab: Change folder and run file",
         "command": "run_matlab_command",
-        "args": {"command": "cd '$package_parent'; $package_member;"},
+        "args": {"command": "cd '$package_parent'; $package_member"},
     },
     {
         "caption": "AutoMatlab: Run selection",
