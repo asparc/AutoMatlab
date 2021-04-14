@@ -251,6 +251,7 @@ can be triggered with command:
 ```
 
 There are also commands to directly jump between open/end statements or to select all enclosed code:
+
 ```json
 {
     "caption": "AutoMatlab: Jump open+end statement",
