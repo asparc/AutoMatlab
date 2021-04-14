@@ -19,8 +19,8 @@ Changes in 1.0.2
     }
 
 
-- New feature: AutoMatlab can now recognized matched opening 
-    statements (e.g., if, for, function) and ending statements. 
+- New feature: AutoMatlab can now recognized paired open 
+    statements (e.g., if, for, function) and end statements. 
     Play around with the following commands:
 
     {

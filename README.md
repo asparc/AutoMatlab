@@ -26,6 +26,8 @@ __Table of Contents__:
     + [Predefined documentation template snippets](#predefined-documentation-template-snippets)
     + [Custom documentation template snippets](#custom-documentation-template-snippets)
     + [Project-specific documentation format](#project-specific-documentation-format)
+- [Extras](#extras)
+    + [Open/end statement pairing](#openend-statement-pairing)
 
 Getting started
 ---------------
@@ -226,5 +228,38 @@ The following settings can be added to the `.sublime-project` file to adapt the 
         "documentation_upper_case_signature": true,
         "documentation_snippet": "mysnippet.sublime-snippet"
     }
+}
+```
+
+Extras
+------
+
+### Open/end statement pairing
+
+AutoMatlab recognizes paired open statements (e.g., `if`, `for`, `function`) and end statements. When the cursor is in an open or end statement, the following popup about the paired statement
+
+![Pair open end popup](fig/pair_open_end_popup.png)
+
+can be triggered with command:
+
+```json
+{
+    "caption": "AutoMatlab: Pair open+end statement",
+    "command": "pair_matlab_statements",
+    "args": {"action": "popup"},
+}
+```
+
+There are also commands to directly jump between open/end statements or to select all enclosed code:
+```json
+{
+    "caption": "AutoMatlab: Jump open+end statement",
+    "command": "pair_matlab_statements",
+    "args": {"action": "jump"},
+},
+{
+    "caption": "AutoMatlab: Select open+end statement",
+    "command": "pair_matlab_statements",
+    "args": {"action": "select"},
 }
 ```
