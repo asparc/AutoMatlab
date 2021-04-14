@@ -1,0 +1,40 @@
+Changes in 1.0.2
+================
+
+- Enhancement: Sending commands to Matlab through AutoHotkey has 
+    become faster with the new (default) option to paste commands 
+    into Matlab.
+
+- New feature: AutoMatlab can now trigger keyboard shortcuts in 
+    Matlab, via AutoHotkey. 
+
+    For instance, you can make AutoMatlab trigger Ctrl+C in Matlab
+    to stop the execution of a currently running Matlab function.
+    This command would look like:
+
+    {
+        "caption": "AutoMatlab: Stop execution",
+        "command": "run_matlab_command",
+        "args": {"command": "^c", "type": "key"}
+    }
+
+
+- New feature: AutoMatlab can now recognized matched opening 
+    statements (e.g., if, for, function) and ending statements. 
+    Play around with the following commands:
+
+    {
+        "caption": "AutoMatlab: Pair open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "popup"},
+    },
+    {
+        "caption": "AutoMatlab: Jump open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "jump"},
+    },
+    {
+        "caption": "AutoMatlab: Select open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "select"},
+    },

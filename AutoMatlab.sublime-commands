@@ -16,6 +16,11 @@
         "command": "toggle_auto_hotkey_focus",
     },
     {
+        "caption": "AutoMatlab: Pair open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "popup"},
+    },
+    {
         "caption": "AutoMatlab: Open file",
         "command": "run_matlab_command",
         "args": {"command": "matlab.desktop.editor.openDocument('$file').goToPositionInLine($line,$column);"},
