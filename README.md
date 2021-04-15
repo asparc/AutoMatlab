@@ -134,11 +134,13 @@ A number of useful commands have been predefined. They can be run through the Su
 It is possible to define custom AutoHotkey commands that execute text commands inside the Matlab Command Window. These AutoMatlab commands can be added to the Sublime Key Bindings or to the Sublime Command Palette. To create custom commands for the Matlab Command Window, use the AutoMatlab command `run_matlab_command` as follows:
 
 ```json
-{
-    "caption": "AutoMatlab: Print status",
-    "command": "run_matlab_command",
-    "args": {"command": "disp('I am editing file $file_name at line $line.')"}
-}
+[
+    {
+        "caption": "AutoMatlab: Print status",
+        "command": "run_matlab_command",
+        "args": {"command": "disp('I am editing file $file_name at line $line.')"}
+    }
+]
 ```
 
 The AutoMatlab command `run_matlab_command` will expand the default Sublime Text variables, such as `$file`, `$file_name`, `$file_base_name`, `$folder`, and `$project_name`. Additionally, AutoMatlab defines the following variables:
@@ -155,11 +157,13 @@ The AutoMatlab command `run_matlab_command` will expand the default Sublime Text
 It is possible to define custom AutoHotkey commands that execute Matlab keyboard shortcuts inside Matlab. These AutoMatlab commands can be added to the Sublime Key Bindings or to the Sublime Command Palette. To create custom commands that run keyboard shortcuts in Matlab, use the AutoMatlab command `run_matlab_command` as follows:
 
 ```json
-{
-    "caption": "AutoMatlab: Stop execution",
-    "command": "run_matlab_command",
-    "args": {"command": "^c", "type": "key"}
-}
+[
+    {
+        "caption": "AutoMatlab: Stop execution",
+        "command": "run_matlab_command",
+        "args": {"command": "^c", "type": "key"}
+    }
+]
 ```
 
 These commands use the syntax of the `SendInput` function of AutoHotkey. For more details on this syntax, see the sections _Parameters_ and _Key names_ in the AutoHotkey [documentation](https://www.autohotkey.com/docs/commands/Send.htm).
@@ -243,24 +247,28 @@ AutoMatlab recognizes paired open statements (e.g., `if`, `for`, `function`) and
 can be triggered with command:
 
 ```json
-{
-    "caption": "AutoMatlab: Pair open+end statement",
-    "command": "pair_matlab_statements",
-    "args": {"action": "popup"},
-}
+[
+    {
+        "caption": "AutoMatlab: Pair open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "popup"},
+    }
+]
 ```
 
 There are also commands to directly jump between open/end statements or to select all enclosed code:
 
 ```json
-{
-    "caption": "AutoMatlab: Jump open+end statement",
-    "command": "pair_matlab_statements",
-    "args": {"action": "jump"},
-},
-{
-    "caption": "AutoMatlab: Select open+end statement",
-    "command": "pair_matlab_statements",
-    "args": {"action": "select"},
-}
+[
+    {
+        "caption": "AutoMatlab: Jump open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "jump"},
+    },
+    {
+        "caption": "AutoMatlab: Select open+end statement",
+        "command": "pair_matlab_statements",
+        "args": {"action": "select"},
+    }
+]
 ```

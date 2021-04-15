@@ -5,6 +5,9 @@ Changes in 1.1.1
     become faster with the new (default) option to paste commands 
     into Matlab.
 
+    NOTE: First remove Packages\AutoMatlab\ahk\run_in_matlab.ahk, such
+    that AutoMatlab will automatically replace it with the new version.
+
 - New feature: AutoMatlab can now trigger keyboard shortcuts in 
     Matlab, via AutoHotkey. 
 
@@ -12,29 +15,35 @@ Changes in 1.1.1
     to stop the execution of a currently running Matlab function.
     This command would look like:
 
-    {
-        "caption": "AutoMatlab: Stop execution",
-        "command": "run_matlab_command",
-        "args": {"command": "^c", "type": "key"}
-    }
+    [
+        {
+            "caption": "AutoMatlab: Stop execution",
+            "command": "run_matlab_command",
+            "args": {"command": "^c", "type": "key"}
+        }
+    ]
 
+    NOTE: First remove Packages\AutoMatlab\ahk\run_in_matlab.ahk, such
+    that AutoMatlab will automatically replace it with the new version.
 
-- New feature: AutoMatlab can now recognized paired open 
+- New feature: AutoMatlab can now recognize paired open 
     statements (e.g., if, for, function) and end statements. 
     Play around with the following commands:
 
-    {
-        "caption": "AutoMatlab: Pair open+end statement",
-        "command": "pair_matlab_statements",
-        "args": {"action": "popup"},
-    },
-    {
-        "caption": "AutoMatlab: Jump open+end statement",
-        "command": "pair_matlab_statements",
-        "args": {"action": "jump"},
-    },
-    {
-        "caption": "AutoMatlab: Select open+end statement",
-        "command": "pair_matlab_statements",
-        "args": {"action": "select"},
-    },
+    [
+        {
+            "caption": "AutoMatlab: Pair open+end statement",
+            "command": "pair_matlab_statements",
+            "args": {"action": "popup"},
+        },
+        {
+            "caption": "AutoMatlab: Jump open+end statement",
+            "command": "pair_matlab_statements",
+            "args": {"action": "jump"},
+        },
+        {
+            "caption": "AutoMatlab: Select open+end statement",
+            "command": "pair_matlab_statements",
+            "args": {"action": "select"},
+        }
+    ]
