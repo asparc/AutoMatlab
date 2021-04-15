@@ -14,9 +14,22 @@ class PairMatlabStatementsCommand(sublime_plugin.TextCommand):
     def iskeyword(self, point):
         """Does the code contain a Matlab keyword at the point?
         """
+        # check if it has a keyword scope
         all_scopes = self.view.scope_name(point)
-        return any([scope.startswith('keyword') 
-            for scope in all_scopes.split()])
+        if not any([scope.startswith('keyword.other') 
+                    or scope.startswith('keyword.control')
+                for scope in all_scopes.split()]):
+            return False
+
+        # check if not preceded by a '.' 
+        # (bug in default Sublime matlab syntax definition)
+        reg_prev_char = sublime.Region(self.view.word(point).begin() - 1, 
+            self.view.word(point).begin())
+        if self.view.substr(reg_prev_char) == '.':
+            return False
+
+        return True
+
 
     def run(self, edit, action='popup'):
         """Find opening statement that is paired with the current 'end'
@@ -43,21 +56,29 @@ class PairMatlabStatementsCommand(sublime_plugin.TextCommand):
             return
 
         if text_key == 'end':
+            # look for matching open statement
             reg_paired = self.pair_with_open_statement(reg_key, keywords)
-            # the below disregards edge-cases with partial one-line statements
-            # or with , or ; in strings or comments
-            if self.view.line(reg_key) == self.view.line(reg_paired):
-                sel_lines = [reg_key.begin(), reg_paired.end()]
-            else:
-                sel_lines = [self.view.full_line(reg_key.begin()).begin(), 
-                             self.view.full_line(reg_paired.end()).end()]
+            if reg_paired:
+                # the below disregards edge-cases with partial one-line 
+                # statements or with , or ; in strings or comments
+                if self.view.line(reg_key) == self.view.line(reg_paired):
+                    sel_lines = [reg_key.begin(), reg_paired.end()]
+                else:
+                    sel_lines = [self.view.full_line(reg_key.begin()).begin(), 
+                        self.view.full_line(reg_paired.end()).end()]
         else:
+            # look for matching end statement
             reg_paired = self.pair_with_end_statement(reg_key, keywords)
-            if self.view.line(reg_key) == self.view.line(reg_paired):
-                sel_lines = [reg_key.end(), reg_paired.begin()]
-            else:
-                sel_lines = [self.view.full_line(reg_key.end()).end(), 
-                             self.view.full_line(reg_paired.begin()).begin()]
+            if reg_paired:
+                # the below disregards edge-cases with partial one-line 
+                # statements or with , or ; in strings or comments
+                if self.view.line(reg_key) == self.view.line(reg_paired):
+                    sel_lines = [reg_key.end(), reg_paired.begin()]
+                else:
+                    sel_lines = [self.view.full_line(reg_key.end()).end(), 
+                        self.view.full_line(reg_paired.begin()).begin()]
+
+        # check if matching statement was found
         if reg_paired == None:
             if not(action == 'jump' or action == 'select'):
                 msg = '[WARNING] AutoMatlab - Cannot pair statement: ' \
@@ -93,11 +114,13 @@ class PairMatlabStatementsCommand(sublime_plugin.TextCommand):
 
             # remove the minimum indentation
             lstrip_lines = [len(text) - len(text.lstrip()) 
-                            for text in text_lines]
+                            for text in text_lines if text]
+            text_lines = [text[min(lstrip_lines):] for text in text_lines]
+
+            # replace spaces by html-spaces &nbsp;
             text_lines = \
-                ['&nbsp;'*(lstrip_lines[ii]-min(lstrip_lines)) 
-                    + text_lines[ii].lstrip() 
-                for ii in range(len(text_lines))]
+                ['&nbsp;'*(len(text) - len(text.lstrip())) + text.lstrip() 
+                 for text in text_lines]
 
             # add line numbers and concatenate text lines
             text = ''
@@ -183,7 +206,6 @@ class PairMatlabStatementsCommand(sublime_plugin.TextCommand):
         no = len(open_statements)
         ne = len(end_statements)
         if no > ne:
-            print(code, no, ne)
             return None
 
         for ii in range(ne):
@@ -203,14 +225,10 @@ class PairMatlabStatementsCommand(sublime_plugin.TextCommand):
         """
         reg = eval(reg)
 
-        ###
-        # these lines are necessary to force the view to update (Sublime bug?)
-        self.view.sel().clear()
-        self.view.sel().add(sublime.Region(reg[0]))
-        self.view.run_command('insert', {'characters':' '})
-        self.view.run_command('left_delete')
-        ###
+        # this line is necessary to force the view to update (Sublime bug?)
+        self.view.run_command('move', {'by':'characters', 'forward':True})
 
+        # select region
         self.view.show(reg[1])
         self.view.sel().clear()
         self.view.sel().add(sublime.Region(reg[0], reg[1]))
