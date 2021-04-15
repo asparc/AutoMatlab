@@ -17,7 +17,7 @@ MatlabID := WinExist("ahk_exe matlab.exe")
 command_type = %2%
 
 ; Read sleep time multiplier (as double)
-sleep_multiplier = %3%
+sleep_multiplier = %4%
 
 if (command_type = "paste") {
     ; Copy command to clipboard
@@ -60,6 +60,7 @@ else {
     if (command_type = "paste") {
         ; Paste and submit text command
         slp := 300 * sleep_multiplier
+        Sleep %slp%
         if WinActive("ahk_id" . MatlabID) {
             Send ^v
             SendInput {Enter}
