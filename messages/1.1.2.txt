@@ -1,0 +1,5 @@
+Changes in 1.1.2
+================
+
+Development for ST3 stops with this release. 
+Future development efforts will target ST4.
