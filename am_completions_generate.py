@@ -186,7 +186,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
             # create moving status bar position
             pos = abs(int(time.time() % 1.5 * 4) - 3)
             msg = "[{}] AutoMatlab - Generating Matlab completions. " \
-                "This might take several minutues".format(
+                "This might take several minutues.".format(
                 " " * pos + "=" + " " * (3 - pos))
             self.window.status_message(msg)
             time.sleep(0.125)
@@ -197,7 +197,7 @@ class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
                 if not self.error:
                     msg = '[INFO] AutoMatlab - Found {}'.format(
                         self.n_completions) + ' Matlab function completions'
-                    # print(msg)
+                    print(msg)
                     self.window.status_message(msg)
             self.lock.release()
 

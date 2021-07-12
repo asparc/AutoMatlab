@@ -107,17 +107,17 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             self.file_completions_lock.release()
 
         # ignore case
-        prefix = prefix.lower()
+        prefix_low = prefix.lower()
 
         # output container
         out = []
-        details = ''
+        doc = ''
 
         # check for exact match
-        if prefix in file_completions.keys():
-            [out, details] = self.extract_local_function_documentation(
+        if prefix_low in file_completions.keys():
+            [out, doc] = self.extract_local_function_documentation(
                 view.window().extract_variables().get('file'), prefix)
-        elif prefix in self.project_completions.keys():
+        elif prefix_low in self.project_completions.keys():
             # read project documentation format from settings
             if view.window().project_data():
                 project_settings = view.window().project_data().get(
@@ -129,18 +129,24 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                     or not settings.get('project_completions', True):
                 free_format = settings.get('free_documentation_format', True)
             # read mfun from mfile to extract all data
-            mfun_data = mfun(self.project_completions[prefix][2], free_format)
+            if free_format:
+                mfun_data = mfun(self.project_completions[prefix_low][2],
+                    'Project function', True)
+            else:
+                mfun_data = mfun(self.project_completions[prefix_low][2], 
+                    deep=True)
+
             if mfun_data.valid:
-                details = self.create_hrefs(mfun_data.details)
+                doc = self.create_hrefs(mfun_data.doc)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
-        elif prefix in self.matlab_completions.keys():
+        elif prefix_low in self.matlab_completions.keys():
             # read mfun from mfile to extract all data
-            mfun_data = mfun(abspath(self.matlab_completions[prefix][2],
-                matlabroot))
+            mfun_data = mfun(abspath(self.matlab_completions[prefix_low][2],
+                matlabroot), deep=True)
             if mfun_data.valid:
-                details = self.create_hrefs(mfun_data.details)
+                doc = self.create_hrefs(mfun_data.doc)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
@@ -156,28 +162,50 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             documentation_popup = settings.get(
                 'documentation_popup', False)
             if documentation_popup:
-                view.show_popup(details,
+                view.show_popup(doc,
                                 sublime.COOPERATE_WITH_AUTO_COMPLETE,
                                 max_width=750, max_height=400,
-                                on_navigate=self.update_details_popup)
+                                on_navigate=self.update_documentation_popup)
                 self.popup_view = view
         else:
-            # check for partial prefix match
+            # check for partial prefix_low match
             out = [[data[0] + '\t' + data[1], data[0]]
                    for fun, data in file_completions.items()
-                   if fun.startswith(prefix)] \
+                   if fun.startswith(prefix_low)] \
                 + [[data[0] + '\t' + data[1], data[0]]
                    for fun, data in self.project_completions.items()
-                   if fun.startswith(prefix)] \
+                   if fun.startswith(prefix_low)] \
                 + [[data[0] + '\t' + data[1], data[0]]
                    for fun, data in self.matlab_completions.items()
-                   if fun.startswith(prefix)]
-        return out
+                   if fun.startswith(prefix_low)]
+        # return (out, sublime.INHIBIT_WORD_COMPLETIONS)
+        return (out)
+
+        comp = [
+            sublime.CompletionItem(
+                "fn",
+                annotation="Ik sta rechts",
+                completion="gefopt",
+                kind=sublime.KIND_FUNCTION
+            ),
+            sublime.CompletionItem(
+                "for",
+                annotation="Ik sta ook rechts",
+                completion="nutteloos",
+                kind=(sublime.KIND_ID_FUNCTION, 'l', 'builtin'),
+                details="<a><web>"
+                # https://nl.mathworks.com/support/search.html?fq[]=asset_type_name:documentation/function&q=disp
+            ),
+        ]
+
+        cl = sublime.CompletionList(comp, flags=sublime.INHIBIT_WORD_COMPLETIONS);
+        return cl
+
 
     def on_text_command(self, view, command_name, args):
         """Redefine a number of sublime commands to obtain smoother
         behaviour. Mainly focused on reloading the completion list and
-        on hiding the function details popup.
+        on hiding the function documentation popup.
         """
         if not view.match_selector(0, 'source.matlab'):
             return []
@@ -202,7 +230,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
     def on_post_text_command(self, view, command_name, args):
         """Redefine a number of sublime commands to obtain smoother
         behaviour. Mainly focused on reloading the completion list and
-        on hiding the function details popup.
+        on hiding the function documentation popup.
         """
         if not view.match_selector(0, 'source.matlab'):
             return []
@@ -438,7 +466,10 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                         if file_mtime > last_mtime:
                             last_mtime = file_mtime
                         # read mfun
-                        mfun_data = mfun(join(root, f), free_format)
+                        if free_format:
+                            mfun_data = mfun(join(root, f), 'Project function')
+                        else:
+                            mfun_data = mfun(join(root, f))
                         if not mfun_data.valid:
                             continue
 
@@ -527,14 +558,14 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             # print(msg)
             window.status_message(msg)
 
-    def create_hrefs(self, details):
+    def create_hrefs(self, doc):
         """Detailed Matlab function documentation contains references to
         other function ("see also"). Extract these references and wrap them
         in html href tags.
         """
         # locate 'see also'
         see_regex = re.compile(r'<p>see also:?\s*(.*?)\.?<\/p>', re.I)
-        mo_see = see_regex.search(details)
+        mo_see = see_regex.search(doc)
 
         # extract referred functions
         if mo_see:
@@ -554,12 +585,12 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                             href_regex = r'\b' + ref + r'\b'
                             hrefs_see = re.sub(href_regex, href, hrefs_see)
             # replace referred function with href
-            details = details.replace(mo_see.group(), hrefs_see)
+            doc = doc.replace(mo_see.group(), hrefs_see)
 
-        return details
+        return doc
 
-    def update_details_popup(self, fun):
-        """Process clicks on hrefs in the function details popup
+    def update_documentation_popup(self, fun):
+        """Process clicks on hrefs in the function documentation popup
         """
         # load settings
         settings = sublime.load_settings('AutoMatlab.sublime-settings')
@@ -578,7 +609,12 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                 free_format = settings.get('free_documentation_format', True)
 
             # read mfun
-            mfun_data = mfun(self.project_completions.get(fun)[2], free_format)
+            if free_format:
+                mfun_data = mfun(self.project_completions.get(fun)[2],
+                    'Project function', True)
+            else:
+                mfun_data = mfun(self.project_completions.get(fun)[2], 
+                    deep=True)
         else:
             # read mfun
             matlabroot = settings.get('matlabroot', 'default')
@@ -588,14 +624,14 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                 matlabroot = abspath(matlabroot)
 
             mfun_data = mfun(abspath(self.matlab_completions.get(fun)[2],
-                matlabroot))
+                matlabroot), deep=True)
 
         # update popup contents
         if mfun_data.valid:
-            mfun_data.details = self.create_hrefs(mfun_data.details)
-            self.popup_view.update_popup(mfun_data.details)
+            mfun_data.doc = self.create_hrefs(mfun_data.doc)
+            self.popup_view.update_popup(mfun_data.doc)
 
-    def extract_local_function_documentation(self, file, fun_lower):
+    def extract_local_function_documentation(self, file, fun):
         """Extract documentation for local function
         """
         if not isfile(file):
@@ -605,10 +641,10 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
         end_regex = re.compile(r'^\s*$')  # end at first empty line
         def_regex = re.compile(
-            r'^\s*function(.*(' + fun_lower + r')\(([^\)]*)\))', re.I)
+            r'^\s*function(.*(' + fun + r')\(([^\)]*)\))', re.I)
 
-        details = '<p><b>Local function</b></p><p>'
         out = []
+        doc = ''
         with open(file, encoding='cp1252') as fh:
             # find first non-empty line
             line = ''
@@ -653,19 +689,23 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                     # append to function documentation
                     mo = doc_regex.search(line)
                     if mo:
+                        if not doc:
+                            # initialize doc
+                            doc = '<p><b>{} - {}</b></p><p>'.format(
+                                fun,'Local function')
                         # newline
-                        if not (details[-3:] == '<p>'
-                                or details[-4:] == '<br>'):
-                            details += '<br>'
+                        if not (doc[-3:] == '<p>'
+                                or doc[-4:] == '<br>'):
+                            doc += '<br>'
                         # append to documentation paragraph
-                        details += mfun.make_html_compliant(mo.group(1))
+                        doc += mfun.make_html_compliant(mo.group(1))
                     else:
                         # start new documentation paragraph
-                        details += '</p><p>'
+                        doc += '</p><p>'
 
         # close documentation paragraph
-        details += '</p>'
-        while details[-7:] == '<p></p>':
-            details = details[:-7]
+        doc += '</p>'
+        while doc[-7:] == '<p></p>':
+            doc = doc[:-7]
 
-        return [[out], details]
+        return [[out], doc]

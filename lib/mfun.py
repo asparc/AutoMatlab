@@ -8,12 +8,12 @@ class mfun:
     """Class to extract function documentation from mfile.
     """
 
-    def __init__(self, path, free_format=False):
+    def __init__(self, path, annotation='', deep=False):
         # initialize data
         self.defs = []  # functions defintions
         self.snips = []  # snippets to insert, derived from defs
-        self.annotation = ''  # one-line description
-        self.details = ''  # multi-line documentation
+        self.annotation = annotation  # one-line description
+        self.doc = ''  # multi-line documentation
         self.path = path  # mfile path
         [self.root, self.file] = split(self.path)  # [root dir, mfile name]
         [self.fun, self.ext] = splitext(self.file)  # [fuction name, ext]
@@ -25,19 +25,108 @@ class mfun:
                 or self.file == config.CONTENTS_NAME:
             return
 
-        if free_format:
-            self.read_free_format()
+        if self.annotation:
+            self.__check_validity()
+            if self.valid and deep:
+                self.__read_free_documentation()
         else:
-            self.read_strict_format()
+            self.__read_annotation()
+            if self.annotation:
+                self.valid = True
+                if deep:
+                    self.__read_strict_documentation()
 
-    def read_strict_format(self):
+    
+    def __read_annotation(self):
+        """Read annotation from mfile, expecting the documentation format 
+        employed by The Mathworks for their built-in functions.
+        """
+        # read mfile line by line
+        with open(self.path, encoding='cp1252') as fh:
+            # find first non-empty line
+            line = ''
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    return
+                if not line:
+                    return
+
+            # check validity of first line
+            sline = line.strip()
+            if not(sline.startswith('function')
+                    or (sline[0] == '%' and self.fun.lower() in sline.lower())):
+                return
+
+            # prepare annotation regex pattern
+            ann_regex = re.compile(
+                r'^\s*%+[\s%]*' + self.fun + r'\s*(.*)', re.I)
+
+            # loop over lines
+            found = False
+            while (not found) and line:
+                # look for annotation
+                mo = ann_regex.search(line.strip())
+                if mo:
+                    # add annotation
+                    self.annotation = mo.group(1)
+                    found = True
+
+                # read next line
+                try:
+                    line = fh.readline()
+                except:
+                    return
+
+    def __check_validity(self):
+        """Check validity of mfile: does it contain a Matlab function?
+        """
+        # read mfile line by line
+        with open(self.path, encoding='cp1252') as fh:
+            # find first non-empty line
+            line = ''
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    return
+                if not line:
+                    return
+
+            # check validity of first line
+            sline = line.strip()
+            if not sline.startswith('function'):
+                return
+
+            # prepare regex patterns
+            def_regex = re.compile(
+                r'^\s*function(.*' + self.fun + r'\(([^\)]*)\))', re.I)
+
+            # get function definition from first line
+            while sline.endswith('...'):
+                # multiline definition
+                try:
+                    sline = sline[:-3] + fh.readline().strip()
+                except:
+                    return
+
+            mo = def_regex.search(sline)
+            if not mo:
+                return
+
+            # function definition found -> valid Matlab function
+            self.valid = True
+
+
+    def __read_strict_documentation(self):
         """Read mfile, strictly expecting the documentation format employed
         by The Mathworks for their built-in functions.
         """
         # read mfile line by line
         with open(self.path, encoding='cp1252') as fh:
             # find first non-empty line
-            line = ""
+            line = ''
             while len(line.strip()) == 0:
                 try:
                     line = fh.readline()
@@ -65,15 +154,13 @@ class mfun:
 
             # loop over lines
             last_def = False
+            doc_started = False
             while line:
-                if not self.annotation:
-                    # look for annotation
+                if not self.doc:
+                    # look for annotation line and start doc from there
                     mo = ann_regex.search(line.strip())
                     if mo:
-                        # add annotation
-                        self.annotation = mo.group(1)
-                        # add documentation header and start new paragraph
-                        self.details = '<p><b>{}</b></p><p>'.format(
+                        self.doc = '<p><b>{} - {}</b></p><p>'.format(self.fun,
                             mfun.make_html_compliant(self.annotation))
                 else:
                     # look for function definitions
@@ -88,23 +175,25 @@ class mfun:
                             # or 'authors:' in lline \
                             # or 'revised:' in lline \
                         # close documentation paragraph
-                        self.details += '</p>'
-                        while self.details[-7:] == '<p></p>':
-                            self.details = self.details[:-7]
+                        self.doc += '</p>'
+                        while self.doc[-7:] == '<p></p>':
+                            self.doc = self.doc[:-7]
                         return
 
                     # append to function documentation
                     mo = doc_regex.search(line)
                     if mo:
                         # newline
-                        if not (self.details[-3:] == '<p>'
-                                or self.details[-4:] == '<br>'):
-                            self.details += '<br>'
+                        if not (self.doc[-3:] == '<p>'
+                                or self.doc[-4:] == '<br>'):
+                            self.doc += '<br>'
                         # append to documentation paragraph
-                        self.details += mfun.make_html_compliant(mo.group(1))
+                        self.doc += mfun.make_html_compliant(mo.group(1))
+                        doc_started = True
                     else:
-                        # start new documentation paragraph
-                        self.details += '</p><p>'
+                        if doc_started:
+                            # start new documentation paragraph
+                            self.doc += '</p><p>'
 
                     if not last_def:
                         # extract function definitions
@@ -127,14 +216,16 @@ class mfun:
                 except:
                     return
 
-    def read_free_format(self):
+
+    def __read_free_documentation(self):
         """Read mfile, accepting any kind of documentation format. This extracts
-        less details from the documentation than the strict format does.
+        less semantic details from the documentation as compared to the strict
+        documentation format.
         """
         # read mfile line by line
         with open(self.path, encoding='cp1252') as fh:
             # find first non-empty line
-            line = ""
+            line = ''
             while len(line.strip()) == 0:
                 try:
                     line = fh.readline()
@@ -148,12 +239,17 @@ class mfun:
             if not sline.startswith('function'):
                 return
 
+            # make documentation with annotation and start new paragraph
+            self.doc = '<p><b>{} - {}</b></p><p>'.format(self.fun, 
+                mfun.make_html_compliant(self.annotation))
+
             # prepare regex patterns
             doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
             # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
             end_regex = re.compile(r'^\s*$')  # end at first empty line
             def_regex = re.compile(
                 r'^\s*function(.*' + self.fun + r'\(([^\)]*)\))', re.I)
+
 
             # get function definition from first line
             while sline.endswith('...'):
@@ -170,8 +266,6 @@ class mfun:
             # read definition and create snippet from it
             self.defs = [mo.group(1).strip()]
             self.snips = [mfun.definition_to_snippet(self.fun, mo.group(2))]
-            self.details = '<p><b>Project function</b></p>'
-            self.annotation = 'Project function'
             self.valid = True
 
             # read next line
@@ -179,9 +273,12 @@ class mfun:
                 line = fh.readline()
             except:
                 return
+            if not line:
+                return
 
-            # read function documentation for details
-            self.details += '<p>'
+            # read function documentation
+            self.doc += '<p>'
+            doc_started = False
             while line:
                 # interrupt at copyright message or comments end
                 lline = line.lower()
@@ -197,14 +294,16 @@ class mfun:
                 mo = doc_regex.search(line)
                 if mo:
                     # newline
-                    if not (self.details[-3:] == '<p>'
-                            or self.details[-4:] == '<br>'):
-                        self.details += '<br>'
+                    if not (self.doc[-3:] == '<p>'
+                            or self.doc[-4:] == '<br>'):
+                        self.doc += '<br>'
                     # append to documentation paragraph
-                    self.details += mfun.make_html_compliant(mo.group(1))
+                    self.doc += mfun.make_html_compliant(mo.group(1))
+                    doc_started = True
                 else:
-                    # start new documentation paragraph
-                    self.details += '</p><p>'
+                    if doc_started:
+                        # start new documentation paragraph
+                        self.doc += '</p><p>'
 
                 # read next line
                 try:
@@ -213,9 +312,9 @@ class mfun:
                     break
 
             # close documentation paragraph
-            self.details += '</p>'
-            while self.details[-7:] == '<p></p>':
-                self.details = self.details[:-7]
+            self.doc += '</p>'
+            while self.doc[-7:] == '<p></p>':
+                self.doc = self.doc[:-7]
 
     @staticmethod
     def make_html_compliant(text):
