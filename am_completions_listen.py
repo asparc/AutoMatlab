@@ -111,11 +111,11 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
         # output container
         out = []
-        doc = ''
+        html = ''
 
         # check for exact match
         if prefix_low in file_completions.keys():
-            [out, doc] = self.extract_local_function_documentation(
+            [out, html] = self.extract_local_function_documentation(
                 view.window().extract_variables().get('file'), prefix)
         elif prefix_low in self.project_completions.keys():
             # read project documentation format from settings
@@ -137,7 +137,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                     deep=True)
 
             if mfun_data.valid:
-                doc = self.create_hrefs(mfun_data.doc)
+                html = self.create_hrefs(mfun_data.html)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
@@ -146,7 +146,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             mfun_data = mfun(abspath(self.matlab_completions[prefix_low][2],
                 matlabroot), deep=True)
             if mfun_data.valid:
-                doc = self.create_hrefs(mfun_data.doc)
+                html = self.create_hrefs(mfun_data.html)
                 for i in range(len(mfun_data.defs)):
                     out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
                                 mfun_data.snips[i]])
@@ -162,7 +162,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             documentation_popup = settings.get(
                 'documentation_popup', False)
             if documentation_popup:
-                view.show_popup(doc,
+                view.show_popup(html,
                                 sublime.COOPERATE_WITH_AUTO_COMPLETE,
                                 max_width=750, max_height=400,
                                 on_navigate=self.update_documentation_popup)
@@ -558,36 +558,39 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             # print(msg)
             window.status_message(msg)
 
-    def create_hrefs(self, doc):
+    def create_hrefs(self, html):
         """Detailed Matlab function documentation contains references to
         other function ("see also"). Extract these references and wrap them
         in html href tags.
         """
         # locate 'see also'
-        see_regex = re.compile(r'<p>see also:?\s*(.*?)\.?<\/p>', re.I)
-        mo_see = see_regex.search(doc)
+        see_regex = re.compile(
+            r'<p>(?:&nbsp;)*see&nbsp;also:?(?:&nbsp;)*(.*?)\.?<\/p>', re.I)
+        mo_see = see_regex.search(html)
 
         # extract referred functions
         if mo_see:
             hrefs_see = mo_see.group()
-            for parts in mo_see.group(1).split(','):
-                for ref in parts.split('<br>'):
-                    ref = ref.strip()
-                    if ref:
-                        # check if completions exist for referred function
-                        linkable = self.project_completions.get(ref.lower())
-                        if not linkable:
-                            linkable = self.matlab_completions.get(ref.lower())
-                        if linkable:
-                            # compose href for function
-                            href = '<a href="{}">{}</a>'.format(ref.lower(),
-                                                                ref)
-                            href_regex = r'\b' + ref + r'\b'
-                            hrefs_see = re.sub(href_regex, href, hrefs_see)
+            parts = mo_see.group(1).replace('<br>',' ')
+            parts = parts.replace(',',' ')
+            parts = parts.replace('&nbsp;',' ')
+            parts = parts.split()
+            for ref in parts:
+                if ref:
+                    # check if completions exist for referred function
+                    linkable = self.project_completions.get(ref.lower())
+                    if not linkable:
+                        linkable = self.matlab_completions.get(ref.lower())
+                    if linkable:
+                        # compose href for function
+                        href = '<a href="{}">{}</a>'.format(ref.lower(),
+                                                            ref)
+                        href_regex = r'\b' + ref + r'\b'
+                        hrefs_see = re.sub(href_regex, href, hrefs_see)
             # replace referred function with href
-            doc = doc.replace(mo_see.group(), hrefs_see)
+            html = html.replace(mo_see.group(), hrefs_see)
 
-        return doc
+        return html
 
     def update_documentation_popup(self, fun):
         """Process clicks on hrefs in the function documentation popup
@@ -628,8 +631,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
         # update popup contents
         if mfun_data.valid:
-            mfun_data.doc = self.create_hrefs(mfun_data.doc)
-            self.popup_view.update_popup(mfun_data.doc)
+            self.popup_view.update_popup(self.create_hrefs(mfun_data.html))
 
     def extract_local_function_documentation(self, file, fun):
         """Extract documentation for local function
