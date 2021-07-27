@@ -1,5 +1,5 @@
 import re
-from os.path import split, splitext, isfile
+from os.path import split, splitext, isfile, abspath, sep, join
 
 import AutoMatlab.lib.config as config
 
@@ -8,15 +8,18 @@ class mfun:
     """Class to extract function documentation from mfile.
     """
 
-    def __init__(self, path, annotation='', deep=False):
+    def __init__(self, path, annotation='', deep=False, local=''):
         # initialize data
-        self.defs = []  # functions defintions
-        self.snips = []  # snippets to insert, derived from defs
-        self.annotation = annotation  # one-line description
-        self.doc = ''  # multi-line documentation
-        self.path = path  # mfile path
+        self.defs = [] # functions defintions
+        self.snips = [] # snippets to insert, derived from defs
+        self.annotation = annotation # one-line description
+        self.doc = [] # multi-line documentation
+        self.path = abspath(path)  # mfile path
         [self.root, self.file] = split(self.path)  # [root dir, mfile name]
         [self.fun, self.ext] = splitext(self.file)  # [fuction name, ext]
+        if local:
+            self.fun = local
+        self.matlabroot = abspath(self.path.split('toolbox')[0])
         self.valid = False
 
         # check mfile validity
@@ -25,10 +28,14 @@ class mfun:
                 or self.file == config.CONTENTS_NAME:
             return
 
+        # handle local function separately
         if self.annotation:
-            self.__check_validity()
-            if self.valid and deep:
-                self.__read_free_documentation()
+            if 'local' in self.annotation.lower():
+                self.__read_local_documentation()
+            else:
+                self.__check_validity()
+                if self.valid and deep:
+                    self.__read_free_documentation()
         else:
             self.__read_annotation()
             if self.annotation:
@@ -59,7 +66,7 @@ class mfun:
 
             # prepare regex patterns
             def_regex = re.compile(
-                r'^\s*function(.*' + self.fun + r'\(([^\)]*)\))', re.I)
+                r'^\s*function(.*(' + self.fun + r')\(([^\)]*)\))', re.I)
 
             # get function definition from first line
             while sline.endswith('...'):
@@ -72,6 +79,9 @@ class mfun:
             mo = def_regex.search(sline)
             if not mo:
                 return
+
+            # update function upper/lower case
+            self.fun = mo.group(2)
 
             # function definition found -> valid Matlab function
             self.valid = True
@@ -93,10 +103,22 @@ class mfun:
                 if not line:
                     return
 
-            # check validity of first line
+            # check validity of first line and optionally update function name
             sline = line.strip()
-            if not(sline.startswith('function')
-                    or (sline[0] == '%' and self.fun.lower() in sline.lower())):
+            if sline.startswith('function'):
+                # update function upper/lower case
+                def_regex = re.compile(
+                    r'^\s*function(.*(' + self.fun + r')\(([^\)]*)\))', re.I)
+                mo = def_regex.search(sline)
+                if mo:
+                    # update function upper/lower case
+                    self.fun = mo.group(2)
+                else:
+                    return
+            elif sline[0] == '%' and self.fun.lower() in sline.lower():
+                # function upper/lower case comes from file name
+                pass
+            else:
                 return
 
             # prepare annotation regex pattern
@@ -118,6 +140,62 @@ class mfun:
                     line = fh.readline()
                 except:
                     return
+
+    def __read_local_documentation(self):
+        """Read documentation for local function
+        """
+        with open(self.path, encoding='cp1252') as fh:
+            # find first non-empty line
+            line = ''
+            while len(line.strip()) == 0:
+                try:
+                    line = fh.readline()
+                except:
+                    return
+                if not line:
+                    return
+
+            # prepare regex patterns
+            doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
+            # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
+            end_regex = re.compile(r'^\s*$')  # end at first empty line
+            def_regex = re.compile(
+                r'^\s*function(.*(' + self.fun + r')\(([^\)]*)\))', re.I)
+
+            # start reading after first non-empty line
+            self.doc = []
+            add = ''
+            for line in fh:
+                # combine multiline statements
+                multiline = add + line.strip()
+                if multiline.endswith('...'):
+                    add = multiline[:-3]
+                    continue
+                else:
+                    add = ''
+
+                # find function definition
+                mo = def_regex.search(multiline)
+                if mo:
+                    # read defintion
+                    self.defs = [mo.group(1).strip()]
+                    # create snippet from defintiion
+                    self.fun = mo.group(2)
+                    self.snips = [mfun.definition_to_snippet(
+                        self.fun, mo.group(3))]
+                    self.valid = True
+
+                if self.valid:
+                    # read function documentation until end regex
+                    if end_regex.search(line):
+                        break
+
+                    # append to function documentation
+                    mo = doc_regex.search(line)
+                    if mo:
+                        self.doc.append(mo.group(1))
+                    elif self.doc:
+                        self.doc.append('')
 
 
     def __read_strict_documentation(self):
@@ -321,6 +399,88 @@ class mfun:
             html = html[:-7]
 
         return html
+
+    @property
+    def text(self):
+        """Format docstring in html"""
+
+        if not self.valid or not self.doc:
+            return ''
+
+        # get minimum whitespace in doc
+        crop = min([len(line) - len(line.lstrip()) 
+                   for line in self.doc if line.strip()])
+
+        # body
+        text = ''
+        for line in self.doc:
+            if line.strip():
+                # append to documentation paragraph
+                text += line[crop:]
+            text += '\n'
+
+        return text
+
+    @property
+    def panel(self):
+        """Format docstring in html"""
+
+    @property
+    def help_browser(self):
+        """Get path to Matlab help file."""
+
+        rel_url = self.__get_help_rel_url()
+        if rel_url:
+            return join(self.matlabroot, rel_url)
+        else:
+            return None
+
+    @property
+    def help_web(self):
+        """Get url to Matlab help webpage."""
+
+        rel_url = self.__get_help_rel_url()
+        if rel_url:
+            return 'https://www.mathworks.com/' + rel_url.replace('\\','/')
+        else:
+            return None
+
+
+    def __get_help_rel_url(self):
+        """Get relative url to Matlab help page."""
+
+        if not 'toolbox' in self.path:
+            return None
+
+        # search in default matlab help
+        help = join('help', 'matlab', 'ref', self.fun + '.html')
+        if isfile(join(self.matlabroot, help)):
+            return help
+
+        # search in toolbox help
+        parts = self.path.split(sep)
+        idx = parts.index('toolbox')
+        if len(parts) > idx + 1:
+            toolbox = parts[idx + 1]
+            if toolbox == 'shared' and len(parts) > idx + 2:
+                toolbox = parts[idx + 2]
+                if toolbox.endswith('lib'):
+                    toolbox = toolbox[:-3]
+            help = join('help', toolbox, self.fun + '.html')
+            if isfile(join(self.matlabroot, help)):
+                return help
+            help = join('help', toolbox, 'ref', self.fun + '.html')
+            if isfile(join(self.matlabroot, help)):
+                return help
+            help = join('help', toolbox, 'ug', self.fun + '.html')
+            if isfile(join(self.matlabroot, help)):
+                return help
+            help = join('help', toolbox, 'slref', self.fun + '.html')
+            if isfile(join(self.matlabroot, help)):
+                return help
+
+        # give up
+        return None
 
     @staticmethod
     def make_html_compliant(text):

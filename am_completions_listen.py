@@ -46,6 +46,79 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             re.compile(r'^\s*function\s+(?:(?:\w+\s*=\s*|'
                        r'\[[\w\s\.,]+\]\s*=\s*)?(\w+)\([^\)]*(\)|\.\.\.))')
 
+    def get_mfun_data(self, window, fun, init=True):
+        """Obtain mfun_data for the specified function
+        """
+        fun_low = fun.lower()
+
+        # read settings
+        settings = sublime.load_settings('AutoMatlab.sublime-settings')
+
+        if init:
+            # load from file completions
+            if settings.get('current_file_completions', True):
+                self.load_file_completions(window.extract_variables().get('file'))
+
+            if fun_low in self.file_completions.keys():
+                return mfun(window.extract_variables().get('file'),
+                    'Local function', local=fun_low)
+
+        # load project/folder completions
+        if not self.project_completions:
+            project = ''
+            # check project type: sublime project or matlab current folder
+            if settings.get('project_completions', True):
+                project = window.extract_variables().get('project_base_name')
+                project_info = window.extract_variables()
+            if not project and settings.get('current_folder_completions', True):
+                if len(window.folders()) == 1:
+                    project = window.folders()[0]
+                else:
+                    project = window.extract_variables().get('file_path')
+                project_info = project
+            if project and project_info:
+                self.load_project_completions(project_info, window.project_data(), 
+                    window.folders(), True)
+                self.project_completions = self.loaded_project_completions.get(
+                    window.extract_variables().get('project_base_name'), {})
+
+        if fun_low in self.project_completions.keys():
+            if window.project_data():
+                project_settings = window.project_data().get(
+                    'auto_matlab', {})
+            else:
+                project_settings = {}
+            free_format = project_settings.get('free_documentation_format')
+            if free_format == None \
+                    or not settings.get('project_completions', True):
+                free_format = settings.get('free_documentation_format', True)
+            # read mfun from mfile to extract all data
+            if free_format:
+                return mfun(self.project_completions[fun_low][2],
+                    'Project function', deep=init)
+            else:
+                return mfun(self.project_completions[fun_low][2], 
+                    deep=init)
+
+        # load matlab completions
+        if (not self.matlab_completions) \
+                and settings.get('matlab_completions', True):
+            self.load_matlab_completions()
+
+        # read matlabroot
+        matlabroot = settings.get('matlabroot', 'default')
+        if matlabroot == 'default':
+            matlabroot = config.DEFAULT_MATLABROOT
+        else:
+            matlabroot = abspath(matlabroot)
+        
+        if fun_low in self.matlab_completions.keys():
+            return mfun(abspath(self.matlab_completions[fun_low][2],
+                matlabroot), deep=init)
+
+        return None
+
+
     def on_query_completions(self, view, prefix, locations):
         """Construct AutoMatlab completion list.
 
@@ -73,7 +146,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             self.load_matlab_completions(view.window())
         else:
             self.matlab_completions_mtime = 0
-            self.matlab_completions = collections.OrderedDict({})
+            self.matlab_completions = collections.OrderedDict({})        
 
         # load project/folder completions
         self.project_completions_lock.acquire()
@@ -106,17 +179,19 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             file_completions = self.file_completions
             self.file_completions_lock.release()
 
-        # ignore case
-        prefix_low = prefix.lower()
-
-        # output container
-        out = []
-        html = ''
-
         # check for exact match
+        mfun_data = None
+        prefix_low = prefix.lower()
+        links = ''
         if prefix_low in file_completions.keys():
-            [out, html] = self.extract_local_function_documentation(
-                view.window().extract_variables().get('file'), prefix)
+            mfun_data = mfun(view.window().extract_variables().get('file'),
+                'Local function', local=prefix_low)
+            links = \
+                "<a href=\'subl:goto_line {{\"line\":\"{}\"}}\'>Goto</a>".format(
+                file_completions[prefix_low][2]) \
+                + " " + \
+                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                    prefix_low)
         elif prefix_low in self.project_completions.keys():
             # read project documentation format from settings
             if view.window().project_data():
@@ -135,70 +210,100 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             else:
                 mfun_data = mfun(self.project_completions[prefix_low][2], 
                     deep=True)
-
-            if mfun_data.valid:
-                html = self.create_hrefs(mfun_data.html)
-                for i in range(len(mfun_data.defs)):
-                    out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
-                                mfun_data.snips[i]])
+            links = \
+                "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
+                abspath(mfun_data.path).replace('\\','\\\\')) \
+                + " " + \
+                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                    prefix_low)
         elif prefix_low in self.matlab_completions.keys():
             # read mfun from mfile to extract all data
             mfun_data = mfun(abspath(self.matlab_completions[prefix_low][2],
                 matlabroot), deep=True)
-            if mfun_data.valid:
-                html = self.create_hrefs(mfun_data.html)
-                for i in range(len(mfun_data.defs)):
-                    out.append([mfun_data.fun + '\t' + mfun_data.defs[i],
-                                mfun_data.snips[i]])
+            links = \
+                "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
+                abspath(mfun_data.path, matlabroot).replace('\\','\\\\')) \
+                + " " + \
+                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                    prefix_low)
+            if mfun_data.help_browser:
+                links += " " + \
+                "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Browser</a>".format(
+                mfun_data.help_browser.replace('\\','\\\\'))
+            if mfun_data.help_web:
+                links += " " + \
+                "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Web</a>".format(
+                mfun_data.help_web)
 
-        if out:
-            # postprocess exact match output
-            if len(out) == 1:
-                out.append([out[0][0].split('\t')[0] + '\t Easter Egg',
-                            config.EASTER[random.randrange(
-                                len(config.EASTER))]])
+        # check if data for exact match found
+        if mfun_data and mfun_data.valid:
+            # build completion list
+            compl = []
+            for i in range(len(mfun_data.snips)):
+                compl.append(sublime.CompletionItem(
+                    mfun_data.fun,
+                    annotation=mfun_data.defs[i],
+                    completion=mfun_data.snips[i],
+                    completion_format = sublime.COMPLETION_FORMAT_SNIPPET,
+                    kind=(sublime.KIND_ID_SNIPPET,'s','Documentation'),
+                    details=links
+                ))
+
+            # add easter egg to force >1 items in completion list
+            if len(compl) == 1:
+                compl.append(sublime.CompletionItem(
+                    mfun_data.fun,
+                    annotation='Easter Egg',
+                    completion=config.EASTER[random.randrange(
+                                len(config.EASTER))],
+                    kind=sublime.KIND_SNIPPET,
+                    details=links
+                ))
+
+            # finalize completion list
+            cl = sublime.CompletionList(compl, 
+                flags=sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_REORDER 
+                | sublime.INHIBIT_EXPLICIT_COMPLETIONS);
 
             # load settings to see if documentation popup should be shown
-            documentation_popup = settings.get(
-                'documentation_popup', False)
+            documentation_popup = settings.get('documentation_popup', False)
             if documentation_popup:
-                view.show_popup(html,
+                view.show_popup(self.create_hrefs(mfun_data.html),
                                 sublime.COOPERATE_WITH_AUTO_COMPLETE,
                                 max_width=750, max_height=400,
                                 on_navigate=self.update_documentation_popup)
                 self.popup_view = view
+
         else:
+
             # check for partial prefix_low match
-            out = [[data[0] + '\t' + data[1], data[0]]
-                   for fun, data in file_completions.items()
-                   if fun.startswith(prefix_low)] \
-                + [[data[0] + '\t' + data[1], data[0]]
-                   for fun, data in self.project_completions.items()
-                   if fun.startswith(prefix_low)] \
-                + [[data[0] + '\t' + data[1], data[0]]
-                   for fun, data in self.matlab_completions.items()
-                   if fun.startswith(prefix_low)]
-        # return (out, sublime.INHIBIT_WORD_COMPLETIONS)
-        return (out)
+            compl = [
+                sublime.CompletionItem(
+                    data[0],
+                    annotation=data[1],
+                    completion=data[0],
+                    kind=(sublime.KIND_ID_FUNCTION, 'l', 'Local function'))
+                for fun, data in file_completions.items()
+                if fun.startswith(prefix_low)
+                ] + [
+                sublime.CompletionItem(
+                    data[0],
+                    annotation=data[1],
+                    completion=data[0],
+                    kind=(sublime.KIND_ID_FUNCTION, 'p', 'Project function'))
+                for fun, data in self.project_completions.items()
+                if fun.startswith(prefix_low)
+                ] + [
+                sublime.CompletionItem(
+                    data[0],
+                    annotation=data[1],
+                    completion=data[0],
+                    kind=(sublime.KIND_ID_FUNCTION, 'b', 'Built-in function'))
+                for fun, data in self.matlab_completions.items()
+                if fun.startswith(prefix_low)]
 
-        comp = [
-            sublime.CompletionItem(
-                "fn",
-                annotation="Ik sta rechts",
-                completion="gefopt",
-                kind=sublime.KIND_FUNCTION
-            ),
-            sublime.CompletionItem(
-                "for",
-                annotation="Ik sta ook rechts",
-                completion="nutteloos",
-                kind=(sublime.KIND_ID_FUNCTION, 'l', 'builtin'),
-                details="<a><web>"
-                # https://nl.mathworks.com/support/search.html?fq[]=asset_type_name:documentation/function&q=disp
-            ),
-        ]
+            cl = sublime.CompletionList(compl)
 
-        cl = sublime.CompletionList(comp, flags=sublime.INHIBIT_WORD_COMPLETIONS);
         return cl
 
 
@@ -227,6 +332,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             view.run_command('hide_popup'),
             return None
 
+
     def on_post_text_command(self, view, command_name, args):
         """Redefine a number of sublime commands to obtain smoother
         behaviour. Mainly focused on reloading the completion list and
@@ -240,6 +346,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                 or (view.is_popup_visible()
                     and not view.is_auto_complete_visible()):
             view.run_command('hide_popup')
+
 
     def on_post_save(self, view):
         """Update project completions upon saving of mfile
@@ -260,6 +367,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # update project completions
         self.load_project_completions_thread(view.window())
 
+
     def on_activated(self, view):
         """Create project completions upon first loading of mfile
         """
@@ -271,6 +379,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
         # create project completions
         self.load_project_completions_thread(view.window(), self.reset_mtimes)
+
 
     def load_file_completions_thread(self, window):
         """Start worker thread to load current file completions
@@ -290,6 +399,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                 args=(window.extract_variables().get('file'),))
             self.load_file_thread.start()
 
+
     def load_file_completions(self, file):
         """Load completion data from the local functions in the current file
         """
@@ -304,8 +414,10 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         with open(file, encoding='cp1252') as fh:
             # find first non-empty line
             line = ''
+            iLine = 0
             while len(line.strip()) == 0:
                 try:
+                    iLine += 1
                     line = fh.readline()
                 except:
                     self.file_completions_lock.acquire()
@@ -320,11 +432,12 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
             # start reading after first non-empty line
             for line in fh:
+                iLine += 1
                 # find function definitions
                 mo = self.locfun_regex.search(line)
                 if mo:
                     fun = mo.group(1)
-                    completions[fun.lower()] = [fun, 'Local function']
+                    completions[fun.lower()] = [fun, 'Local function', iLine]
 
         # sort the completions
         sorted_completions = collections.OrderedDict(
@@ -334,6 +447,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         self.file_completions_lock.acquire()
         self.file_completions = sorted_completions
         self.file_completions_lock.release()
+
 
     def load_project_completions_thread(self, window, update=True):
         """Start worker thread to load project completions
@@ -376,6 +490,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                       window.folders(), self.reset_mtimes))
             self.load_project_thread.start()
             self.reset_mtimes = False
+
 
     def load_project_completions(self, project_info, project_settings,
                                  project_folders, reset_mtimes=False):
@@ -521,7 +636,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         self.loaded_project_completions_mtime[project] = last_mtime
         self.loaded_project_completions_mtime.pop(popped_key, None)
 
-    def load_matlab_completions(self, window):
+
+    def load_matlab_completions(self, window=None):
         """Load stored matlab completion data into completion dict
         """
         completions_name = split(config.MATLAB_COMPLETIONS_PATH)[-1]
@@ -556,7 +672,9 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             msg = '[WARNING] AutoMatlab - No Matlab completions found. ' \
                 'Try generating them through the command palette.'
             # print(msg)
-            window.status_message(msg)
+            if window:
+                window.status_message(msg)
+
 
     def create_hrefs(self, html):
         """Detailed Matlab function documentation contains references to
@@ -571,10 +689,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # extract referred functions
         if mo_see:
             hrefs_see = mo_see.group()
-            parts = mo_see.group(1).replace('<br>',' ')
-            parts = parts.replace(',',' ')
-            parts = parts.replace('&nbsp;',' ')
-            parts = parts.split()
+            parts = mo_see.group(1).replace('<br>',' ').replace(
+                ',',' ').replace('&nbsp;',' ').split()
             for ref in parts:
                 if ref:
                     # check if completions exist for referred function
@@ -585,12 +701,13 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
                         # compose href for function
                         href = '<a href="{}">{}</a>'.format(ref.lower(),
                                                             ref)
-                        href_regex = r'\b' + ref + r'\b'
-                        hrefs_see = re.sub(href_regex, href, hrefs_see)
+                        ref_regex = r'\b' + ref + r'\b'
+                        hrefs_see = re.sub(ref_regex, href, hrefs_see)
             # replace referred function with href
             html = html.replace(mo_see.group(), hrefs_see)
 
         return html
+
 
     def update_documentation_popup(self, fun):
         """Process clicks on hrefs in the function documentation popup
@@ -633,81 +750,85 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         if mfun_data.valid:
             self.popup_view.update_popup(self.create_hrefs(mfun_data.html))
 
-    def extract_local_function_documentation(self, file, fun):
-        """Extract documentation for local function
+
+class AutoMatlabDocumentationPanelCommand(sublime_plugin.TextCommand):
+
+    """Run a command in Matlab, via AutoHotkey
+    """
+
+    def run(self, edit, fun):
         """
-        if not isfile(file):
-            return [None, None]
+        Create panel with function documentation.
+        """
+        
+        # switch to output panel
+        self.view.run_command('hide_auto_complete')
+        window = self.view.window()
+        window.destroy_output_panel('auto_matlab')
+        panel = window.create_output_panel('auto_matlab')
 
-        doc_regex = re.compile(r'^\s*%+[\s%]*(.*\S)')
-        # end_regex = re.compile(r'^\s*[^%\s]') % end at first empty comment
-        end_regex = re.compile(r'^\s*$')  # end at first empty line
-        def_regex = re.compile(
-            r'^\s*function(.*(' + fun + r')\(([^\)]*)\))', re.I)
+        # reader to for function documentation
+        fun_reader = AutoMatlabCompletionsListener()
+        mfun_data = fun_reader.get_mfun_data(window, fun)
+        # find hrefs in text and preprocess text
+        [text, hrefs] = self.find_hrefs(mfun_data.text, window, fun_reader)
 
-        out = []
-        doc = ''
-        with open(file, encoding='cp1252') as fh:
-            # find first non-empty line
-            line = ''
-            while len(line.strip()) == 0:
-                try:
-                    line = fh.readline()
-                except:
-                    return [None, None]
-                if not line:
-                    return [None, None]
+        # make documentation title phantom
+        title = '<p><b>{} - {}</b></p>'.format(mfun_data.fun, 
+                        mfun.make_html_compliant(mfun_data.annotation))
+        phantoms = [sublime.Phantom(sublime.Region(0,0), title, 
+            sublime.LAYOUT_INLINE)]
 
-            # start reading after first non-empty line
-            found = False
-            add = ''
-            for line in fh:
-                # combine multiline statements
-                multiline = add + line.strip()
-                if multiline.endswith('...'):
-                    add = multiline[:-3]
-                    continue
-                else:
-                    add = ''
+        # make href phantoms
+        for ref, loc in hrefs.items():
+            phantoms.append(sublime.Phantom(sublime.Region(loc+1,loc+1), 
+                '<a href="{}">{}</a>'.format(ref.lower(), ref), 
+                sublime.LAYOUT_INLINE, self.update_documentation_panel))
 
-                # find function definition
-                mo = def_regex.search(multiline)
-                if mo:
-                    found = True
-                    # read defintion
-                    definition = mo.group(1).strip()
-                    fun = mo.group(2)
-                    # create snippet from defintiion
-                    snip = mfun.definition_to_snippet(fun, mo.group(3))
-                    # compose output
-                    out = [fun + '\t' + definition, snip]
-                    continue
+        # fill output panel with documentation text
+        panel.run_command("append", {"characters": '\n' + text.rstrip() + ' '})
 
-                if found:
-                    # read function documentation until end regex
-                    if end_regex.search(line):
-                        break
+        # show output panel, with the phantoms
+        self.phantom_set = sublime.PhantomSet(panel, 'auto_matlab_documentation')
+        self.phantom_set.update(phantoms)
+        window.run_command('show_panel', {'panel':'output.auto_matlab'})
 
-                    # append to function documentation
-                    mo = doc_regex.search(line)
-                    if mo:
-                        if not doc:
-                            # initialize doc
-                            doc = '<p><b>{} - {}</b></p><p>'.format(
-                                fun,'Local function')
-                        # newline
-                        if not (doc[-3:] == '<p>'
-                                or doc[-4:] == '<br>'):
-                            doc += '<br>'
-                        # append to documentation paragraph
-                        doc += mfun.make_html_compliant(mo.group(1))
-                    else:
-                        # start new documentation paragraph
-                        doc += '</p><p>'
 
-        # close documentation paragraph
-        doc += '</p>'
-        while doc[-7:] == '<p></p>':
-            doc = doc[:-7]
+    def find_hrefs(self, text, window, fun_reader):
+        """Detailed Matlab function documentation contains references to
+        other function ("see also"). Extract these references wrap them
+        in html href tags. Also provide their location and cut them from the
+        text.
+        """
+        # locate 'see also'
+        see_regex = re.compile(r'\n\s*see also:?\s*([\s\S]*?)\.?\n\n', re.I)
+        mo_see = see_regex.search(text + '\n')
 
-        return [[out], doc]
+        # extract referred functions
+        hrefs = {}
+        if mo_see:
+            start_see = mo_see.start()
+            hrefs_see = mo_see.group()
+            parts = mo_see.group(1).replace(',',' ').split()
+            for ref in parts:
+                if ref:
+                    # check if completions exist for referred function
+                    mfun_data = fun_reader.get_mfun_data(window, ref, False)
+                    if mfun_data and mfun_data.valid:
+                        # locate ref within hrefs_see and cut it out
+                        ref_regex = r'\b' + ref + r'\b'
+                        mo_ref = re.search(ref_regex, hrefs_see)
+                        start = mo_ref.start()
+                        end = start + len(ref)
+                        hrefs_see = hrefs_see[:start] + hrefs_see[end:]
+                        hrefs[ref] = start_see + start
+
+            # replace referred function with href
+            text = text.replace(mo_see.group().rstrip(), hrefs_see.rstrip())
+
+        return text, hrefs
+
+    def update_documentation_panel(self, fun):
+        sublime.active_window().run_command(
+            'auto_matlab_documentation_panel', {'fun':fun})
+
