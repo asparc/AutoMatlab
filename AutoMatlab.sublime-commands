@@ -8,6 +8,10 @@
         "command": "generate_auto_matlab_documentation"
     },
     {
+        "caption": "AutoMatlab: Show function documentation panel",
+        "command": "show_auto_matlab_documentation_panel"
+    },
+    {
         "caption": "AutoMatlab: Open command panel",
         "command": "open_auto_matlab_command_panel",
     },

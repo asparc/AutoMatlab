@@ -41,6 +41,7 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         # flags
         self.warned = False
         self.reset_mtimes = True
+        self.check_exact_match = False
         # other
         self.locfun_regex = \
             re.compile(r'^\s*function\s+(?:(?:\w+\s*=\s*|'
@@ -183,57 +184,59 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         mfun_data = None
         prefix_low = prefix.lower()
         links = ''
-        if prefix_low in file_completions.keys():
-            mfun_data = mfun(view.window().extract_variables().get('file'),
-                'Local function', local=prefix_low)
-            links = \
-                "<a href=\'subl:goto_line {{\"line\":\"{}\"}}\'>Goto</a>".format(
-                file_completions[prefix_low][2]) \
-                + " " + \
-                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
-                    prefix_low)
-        elif prefix_low in self.project_completions.keys():
-            # read project documentation format from settings
-            if view.window().project_data():
-                project_settings = view.window().project_data().get(
-                    'auto_matlab', {})
-            else:
-                project_settings = {}
-            free_format = project_settings.get('free_documentation_format')
-            if free_format == None \
-                    or not settings.get('project_completions', True):
-                free_format = settings.get('free_documentation_format', True)
-            # read mfun from mfile to extract all data
-            if free_format:
-                mfun_data = mfun(self.project_completions[prefix_low][2],
-                    'Project function', True)
-            else:
-                mfun_data = mfun(self.project_completions[prefix_low][2], 
-                    deep=True)
-            links = \
-                "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
-                abspath(mfun_data.path).replace('\\','\\\\')) \
-                + " " + \
-                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
-                    prefix_low)
-        elif prefix_low in self.matlab_completions.keys():
-            # read mfun from mfile to extract all data
-            mfun_data = mfun(abspath(self.matlab_completions[prefix_low][2],
-                matlabroot), deep=True)
-            links = \
-                "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
-                abspath(mfun_data.path, matlabroot).replace('\\','\\\\')) \
-                + " " + \
-                "<a href=\'subl:auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
-                    prefix_low)
-            if mfun_data.help_browser:
-                links += " " + \
-                "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Browser</a>".format(
-                mfun_data.help_browser.replace('\\','\\\\'))
-            if mfun_data.help_web:
-                links += " " + \
-                "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Web</a>".format(
-                mfun_data.help_web)
+        if self.check_exact_match:
+            self.check_exact_match = False
+            if prefix_low in file_completions.keys():
+                mfun_data = mfun(view.window().extract_variables().get('file'),
+                    'Local function', local=prefix_low)
+                links = \
+                    "<a href=\'subl:goto_line {{\"line\":\"{}\"}}\'>Goto</a>".format(
+                    file_completions[prefix_low][2]) \
+                    + " " + \
+                    "<a href=\'subl:show_auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                        prefix_low)
+            elif prefix_low in self.project_completions.keys():
+                # read project documentation format from settings
+                if view.window().project_data():
+                    project_settings = view.window().project_data().get(
+                        'auto_matlab', {})
+                else:
+                    project_settings = {}
+                free_format = project_settings.get('free_documentation_format')
+                if free_format == None \
+                        or not settings.get('project_completions', True):
+                    free_format = settings.get('free_documentation_format', True)
+                # read mfun from mfile to extract all data
+                if free_format:
+                    mfun_data = mfun(self.project_completions[prefix_low][2],
+                        'Project function', True)
+                else:
+                    mfun_data = mfun(self.project_completions[prefix_low][2], 
+                        deep=True)
+                links = \
+                    "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
+                    abspath(mfun_data.path).replace('\\','\\\\')) \
+                    + " " + \
+                    "<a href=\'subl:show_auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                        prefix_low)
+            elif prefix_low in self.matlab_completions.keys():
+                # read mfun from mfile to extract all data
+                mfun_data = mfun(abspath(self.matlab_completions[prefix_low][2],
+                    matlabroot), deep=True)
+                links = \
+                    "<a href=\'subl:open_file {{\"file\":\"{}\"}}\'>Goto</a>".format(
+                    abspath(mfun_data.path, matlabroot).replace('\\','\\\\')) \
+                    + " " + \
+                    "<a href=\'subl:show_auto_matlab_documentation_panel {{\"fun\":\"{}\"}}\'>Panel</a>".format(
+                        prefix_low)
+                if mfun_data.help_browser:
+                    links += " " + \
+                    "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Browser</a>".format(
+                    mfun_data.help_browser.replace('\\','\\\\'))
+                if mfun_data.help_web:
+                    links += " " + \
+                    "<a href=\'subl:open_url {{\"url\":\"{}\"}}\'>Web</a>".format(
+                    mfun_data.help_web)
 
         # check if data for exact match found
         if mfun_data and mfun_data.valid:
@@ -314,22 +317,9 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
         """
         if not view.match_selector(0, 'source.matlab'):
             return []
-
-        if view.is_auto_complete_visible() \
-                and command_name == 'move' \
-                and args['by'] == 'lines':
-            # load settings to see if navigation should be overridden
-            settings = sublime.load_settings('AutoMatlab.sublime-settings')
-            ctrl_nav = settings.get('ctrl_completion_navigation', False)
-            if ctrl_nav:
-                view.run_command('hide_popup')
-                view.run_command('hide_auto_complete')
-            return None
-
-        if command_name == 'auto_complete' \
-                and view.is_auto_complete_visible():
-            view.run_command('hide_auto_complete'),
-            view.run_command('hide_popup'),
+        
+        if command_name == 'auto_complete':
+            self.check_exact_match = True
             return None
 
 
@@ -342,10 +332,8 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             return []
 
         # make sure popup disappears together with autocomplete
-        if command_name == 'hide_auto_complete' \
-                or (view.is_popup_visible()
-                    and not view.is_auto_complete_visible()):
-            view.run_command('hide_popup')
+        if command_name == 'hide_popup':
+            view.run_command('hide_auto_complete')
 
 
     def on_post_save(self, view):
@@ -751,18 +739,21 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
             self.popup_view.update_popup(self.create_hrefs(mfun_data.html))
 
 
-class AutoMatlabDocumentationPanelCommand(sublime_plugin.TextCommand):
+class ShowAutoMatlabDocumentationPanelCommand(sublime_plugin.TextCommand):
 
     """Run a command in Matlab, via AutoHotkey
     """
 
-    def run(self, edit, fun):
+    def run(self, edit, fun=None):
+        """Create panel with function documentation.
         """
-        Create panel with function documentation.
-        """
+        if not fun:
+            # read function at cursor
+            fun = self.view.substr(self.view.word(self.view.sel()[0]))
         
         # switch to output panel
         self.view.run_command('hide_auto_complete')
+        self.view.run_command('hide_popup')
         window = self.view.window()
         window.destroy_output_panel('auto_matlab')
         panel = window.create_output_panel('auto_matlab')
@@ -770,28 +761,37 @@ class AutoMatlabDocumentationPanelCommand(sublime_plugin.TextCommand):
         # reader to for function documentation
         fun_reader = AutoMatlabCompletionsListener()
         mfun_data = fun_reader.get_mfun_data(window, fun)
-        # find hrefs in text and preprocess text
-        [text, hrefs] = self.find_hrefs(mfun_data.text, window, fun_reader)
 
-        # make documentation title phantom
-        title = '<p><b>{} - {}</b></p>'.format(mfun_data.fun, 
-                        mfun.make_html_compliant(mfun_data.annotation))
-        phantoms = [sublime.Phantom(sublime.Region(0,0), title, 
-            sublime.LAYOUT_INLINE)]
+        if mfun_data:
+            # find hrefs in text and preprocess text
+            [text, hrefs] = self.find_hrefs(mfun_data.text, window, fun_reader)
 
-        # make href phantoms
-        for ref, loc in hrefs.items():
-            phantoms.append(sublime.Phantom(sublime.Region(loc+1,loc+1), 
-                '<a href="{}">{}</a>'.format(ref.lower(), ref), 
-                sublime.LAYOUT_INLINE, self.update_documentation_panel))
+            # make documentation title phantom
+            title = '<p><b>{} - {}</b></p>'.format(mfun_data.fun, 
+                            mfun.make_html_compliant(mfun_data.annotation))
+            phantoms = [sublime.Phantom(sublime.Region(0,0), title, 
+                sublime.LAYOUT_INLINE)]
 
-        # fill output panel with documentation text
-        panel.run_command("append", {"characters": '\n' + text.rstrip() + ' '})
+            # make href phantoms
+            for ref, loc in hrefs.items():
+                phantoms.append(sublime.Phantom(sublime.Region(loc+1,loc+1), 
+                    '<a href="{}">{}</a>'.format(ref.lower(), ref), 
+                    sublime.LAYOUT_INLINE, self.update_documentation_panel))
 
-        # show output panel, with the phantoms
-        self.phantom_set = sublime.PhantomSet(panel, 'auto_matlab_documentation')
-        self.phantom_set.update(phantoms)
-        window.run_command('show_panel', {'panel':'output.auto_matlab'})
+            # fill output panel with documentation text
+            panel.run_command("append", 
+                {"characters": '\n' + text.rstrip() + ' '})
+
+            # show output panel, with the phantoms
+            self.phantom_set = sublime.PhantomSet(panel, 
+                'auto_matlab_documentation')
+            self.phantom_set.update(phantoms)
+            window.run_command('show_panel', {'panel':'output.auto_matlab'})
+        else:
+            msg = '[WARNING] AutoMatlab - No documentation found' \
+                + ' for function: {}.'.format(fun)
+            if window:
+                window.status_message(msg)
 
 
     def find_hrefs(self, text, window, fun_reader):
@@ -830,5 +830,5 @@ class AutoMatlabDocumentationPanelCommand(sublime_plugin.TextCommand):
 
     def update_documentation_panel(self, fun):
         sublime.active_window().run_command(
-            'auto_matlab_documentation_panel', {'fun':fun})
+            'show_auto_matlab_documentation_panel', {'fun':fun})
 
