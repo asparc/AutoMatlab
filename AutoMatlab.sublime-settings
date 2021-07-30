@@ -104,19 +104,6 @@
     // match with the autocompletion trigger of a function.
     "documentation_popup": true,
 
-    // Sublime Text lets you navigate the completion list 
-    // with `up/down`, forcing you to press `esc` before you can
-    // move the cursor to another line. AutoMatlab can override
-    // this behaviour of Sublime Text, such that `up/down` serves
-    // to navigate the active document, while `ctrl+up/down` 
-    // serves to navigate the autocompletion list.
-    "ctrl_completion_navigation": false,
-
-    // With the option `ctrl_completion_navigation` set to `true`,
-    // it is convenient to use `ctrl+right` to commit
-    // the current completion suggestion.
-    "ctrl_right_commit": false,
-
     // ********************************************************* //
     // ************* Matlab autocompletion sources ************* //
     // ********************************************************* //

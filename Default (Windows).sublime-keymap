@@ -88,37 +88,4 @@
             { "key": "setting.auto_matlab_command_panel" },
         ]
     },
-
-    // Navigate through completions list
-    {
-        "keys": ["ctrl+up"], 
-        "command": "navigate_auto_matlab_completions", "args": {"amount": -1.0 },
-        "context": 
-        [
-            {"key": "selector", "operator": "equal", "operand": "source.matlab" },
-            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
-        ],
-
-    },
-    {
-        "keys": ["ctrl+down"], 
-        "command": "navigate_auto_matlab_completions", "args": {"amount": 1.0 },
-        "context": 
-        [
-            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
-            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
-        ],
-
-    },
-    // Commit completion 
-    {
-        "keys": ["ctrl+right"], 
-        "command": "navigate_auto_matlab_completions", "args": {"amount": 0.0 },
-        "context": 
-        [
-            { "key": "selector", "operator": "equal", "operand": "source.matlab" },
-            { "key": "auto_complete_visible", "operator": "equal", "operand": true },
-        ],
-
-    },
 ]
