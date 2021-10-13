@@ -307,6 +307,9 @@ class AutoMatlabCompletionsListener(sublime_plugin.EventListener):
 
             cl = sublime.CompletionList(compl)
 
+        if not compl and view.is_popup_visible():
+            view.hide_popup()
+
         return cl
 
 
