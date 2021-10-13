@@ -56,7 +56,7 @@
 
     // Number of commands from the Matlab history to list in
     // the AutoMatlab command panel.
-    "matlab_history_length": 200,
+    "matlab_history_length": 500,
 
     // ********************************************************* //
     // ***** AutoMatlab function documentation generation ****** //
