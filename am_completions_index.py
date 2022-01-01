@@ -142,10 +142,10 @@ def process_pathdef(matlab_pathdef_path, matlabroot):
     return matlab_path_dirs
 
 
-class GenerateAutoMatlabCompletionsCommand(sublime_plugin.WindowCommand):
+class IndexMatlabCompletionsCommand(sublime_plugin.WindowCommand):
 
-    """Generate Matlab autocompletion information by parsing the
-    current Matlab installation.
+    """Index Matlab autocompletion information by parsing the
+    Matlab installation.
     """
 
     def __init__(self, window):

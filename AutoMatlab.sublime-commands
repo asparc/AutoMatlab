@@ -1,7 +1,7 @@
 [
     {
-    	"caption": "AutoMatlab: Generate Matlab autocompletion information",
-    	"command": "generate_auto_matlab_completions"
+    	"caption": "AutoMatlab: Index Matlab autocompletions",
+    	"command": "index_matlab_completions"
     },
     {
         "caption": "AutoMatlab: Generate function documentation",
