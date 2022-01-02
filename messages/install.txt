@@ -12,14 +12,15 @@ Getting started
 
 - Autocompletion:
   Works out of the box! Start typing or try pressing `Ctrl + Space` to see what it does. 
-- Function documentation generation:
-  Works out of the box! Try pressing `Ctrl + Alt + m` in a Matlab function file to see what it does.
 - Matlab commands:
   Depends on AutoHotkey (https://www.autohotkey.com). If AutoHotkey is installed and `auto_hotkey_path` correctly specified in the AutoMatlab settings, try pressing `Ctrl + b` to run the current file in Matlab or `Alt + m` to open the AutoMatlab Command Panel.
+- Function documentation generation:
+  Works out of the box! Try pressing `Ctrl + Alt + m` in a Matlab function file to see what it does.
 
 If you are interested in more tailored functionality, have a look at the extensive documentation in the README.
 
 Note 1: AutoMatlab currently only supports Matlab installations on Windows.
 
 Note 2: Make sure that the syntax of `.m` files is set to Matlab (by default):
+    
     View > Syntax (> Open all with current extension as...) > Matlab

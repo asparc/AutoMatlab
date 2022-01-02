@@ -39,7 +39,7 @@ Getting started
 - __Function documentation generation__
   Works out of the box! Try pressing <kbd>Ctrl + Alt + m</kbd> in a Matlab function file to see what it does. If you are interested in more tailored functionality, have a look [here](#function-documentation-generation). 
 
-*Note 1: AutoMatlab currently only supports Matlab installations on __Windows__*.
+*Note 1: AutoMatlab currently only supports Matlab installations on __Windows__*.<br/>
 *Note 2: Make sure that the syntax of `.m` files is set to Matlab (by default):*
 
     View > Syntax (> Open all with current extension as...) > Matlab
@@ -60,7 +60,7 @@ Autocompletion suggestions will be automatically shown while typing, but can als
 
 ![Command panel](fig/autocompletion.png)
 
-When the typed text exactly matches a function name, querying the autocompletion with <kbd>Ctrl + Space</kbd> yields a list of suggested function signature snippets, as well a pop-up with the function documentation.
+When the typed text exactly matches a function name, querying the autocompletion with <kbd>Ctrl + Space</kbd> yields a list of suggested function signature snippets, as well a pop-up with the function documentation. A panel with the function documentation can also be called through the command `show_auto_matlab_documentation_panel`.
 
 ![Command panel](fig/popup.png)
 
@@ -73,9 +73,9 @@ AutoMatlab comes by default with autocompletion information for about 3000 built
     - (Optional) Specify the `pathdef.m` path via `matlab_pathdef_path`.
     - (Optional) Fine-tune the sources for the autocompletion information in the section `Matlab autocompletion sources`. All fine-tuning options are documented in the default AutoMatlab settings file.
 2. Open the Sublime Command Palette:
-    - Run `AutoMatlab: Generate Matlab autocompletion information`. AutoMatlab will parse the specified directories, searching for Matlab functions that adhere to the documentation format used by The MathWorks.
+    - Run `AutoMatlab: Index Matlab autocompletions`. AutoMatlab will parse the specified directories, searching for Matlab functions that adhere to the documentation format used by The MathWorks.
     - Wait for the process to finish (see status bar). This can take several minutes, depending on the Matlab installation.
-3. Done! The newly generated autocompletion information is stored in `Packages\AutoMatlab\data\matlab_completions`.
+3. Done! The Matlab autocompletion data is stored in `Packages\AutoMatlab\data\matlab_completions`.
 
 ### Project autocompletion
 
@@ -244,7 +244,7 @@ AutoMatlab recognizes paired open statements (e.g., `if`, `for`, `function`) and
 
 ![Pair open end popup](fig/pair_open_end_popup.png)
 
-can be triggered with command:
+can be triggered with the command:
 
 ```json
 [
